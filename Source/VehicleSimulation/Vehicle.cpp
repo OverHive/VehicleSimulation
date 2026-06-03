@@ -14,6 +14,7 @@ AVehicle::AVehicle()
     //Create the Root Component
     MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
     RootComponent = MeshComponent;
+    MeshComponent->SetAngularDamping(1.0f);
 
     // Enable physic and gravity;
     MeshComponent->SetSimulatePhysics(true);
@@ -30,7 +31,7 @@ void AVehicle::BeginPlay()
     {
         if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
         {
-            Subsystem->AddMappingContext(DefaultMappingContext, 0);
+            Subsystem->AddMappingContext(VehicleMappingContext, 0);
         }
     }
 
@@ -41,17 +42,33 @@ void AVehicle::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     // Apply force each frame based on stored input
-    if (MeshComponent && !CurrentInputDirection.IsNearlyZero())
+    if (MeshComponent)
     {
-        // Calculate direction based on Actor orientation
-        FVector Forward = GetActorForwardVector();
-        FVector Right = GetActorRightVector();
+        // Throttle
+        FVector ForwardForce = GetActorForwardVector() * (CurrentThrottle * ThrottleForce);
+        //Calculate drag using: Drag force = 0.5*drag Coefficient*Area*air density* speed^2
+        FVector Velocity = MeshComponent->GetPhysicsLinearVelocity();
+        float CurrentSpeed = Velocity.Size();
+        float Area = Height * Width;
+        FVector DragForce = Velocity.GetSafeNormal() *0.5* DragCoefficient*Area* AirDensity * CurrentSpeed * CurrentSpeed;
+        //Subtract resistive forces from the diving force
+        ForwardForce -= DragForce;
+        MeshComponent->AddForce(ForwardForce, NAME_None, false);
 
-        // Combine directions with input (Y is Forward/Backward, X is Left/Right)
-        FVector MoveDirection = (Forward * CurrentInputDirection.Y) + (Right * CurrentInputDirection.X);
+        // Steering (change to incorporate wheel in future)
+        FVector Torque = GetActorUpVector() * (CurrentSteering * SteeringTorque);
 
-        // Apply Force
-        MeshComponent->AddForce(MoveDirection * MovementForce);
+        MeshComponent->AddTorqueInDegrees(Torque, NAME_None, false);
+        if (!Torque.IsNearlyZero())
+        {
+            FMessageLog("Game").Info(FText::FromString((GetActorUpVector() * CurrentSteering).ToCompactString()));
+        }
+        // Braking
+        if (CurrentBrake > 0.0f)
+        {
+            FVector BrakingForce = -MeshComponent->GetPhysicsLinearVelocity().GetSafeNormal() * (CurrentBrake * BrakeForce);
+            MeshComponent->AddForce(BrakingForce, NAME_None, false);
+        }
     }
 
 }
@@ -64,22 +81,32 @@ void AVehicle::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     //Bind the Enhanced Input Action
     if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
     {
-        EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AVehicle::Move);
+        // Bind Throttle
+        EnhancedInputComponent->BindAction(ThrottleAction, ETriggerEvent::Triggered, this, &AVehicle::Input_Throttle);
+        EnhancedInputComponent->BindAction(ThrottleAction, ETriggerEvent::Completed, this, &AVehicle::Input_Throttle);
 
-        //Reset input when key is released
-        EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &AVehicle::Move);
+        // Bind Steering
+        EnhancedInputComponent->BindAction(SteeringAction, ETriggerEvent::Triggered, this, &AVehicle::Input_Steering);
+        EnhancedInputComponent->BindAction(SteeringAction, ETriggerEvent::Completed, this, &AVehicle::Input_Steering);
+
+        // Bind Brake
+        EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Triggered, this, &AVehicle::Input_Brake);
+        EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Completed, this, &AVehicle::Input_Brake);
     }
 
 }
 
-void AVehicle::Move(const FInputActionValue& Value)
+void AVehicle::Input_Throttle(const FInputActionValue& Value)
 {
-    // Store the 2D vector from the input action
-    CurrentInputDirection = Value.Get<FVector2D>();
-    keyDown = true;
-    // Set the input to the default position if the key is released
-    if (CurrentInputDirection.IsNearlyZero())
-    {
-        CurrentInputDirection = FVector2D::ZeroVector;
-    }
+    CurrentThrottle = Value.Get<float>();
+}
+
+void AVehicle::Input_Steering(const FInputActionValue& Value)
+{
+    CurrentSteering = Value.Get<float>();
+}
+
+void AVehicle::Input_Brake(const FInputActionValue& Value)
+{
+    CurrentBrake = Value.Get<float>();
 }
