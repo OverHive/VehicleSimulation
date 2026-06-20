@@ -5,7 +5,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "InputMappingContext.h"
+#include "Tire.h"
 #include "Vehicle.generated.h"
+
 
 UCLASS()
 class VEHICLESIMULATION_API AVehicle : public APawn
@@ -65,8 +67,33 @@ public:
 	float AirDensity = 1.20;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float DragCoefficient = 0.30;
+	// Anchor points for the tire
+	UPROPERTY(VisibleAnywhere, Category = "Anchors")
+	USceneComponent* FL_Anchor;
 
+	UPROPERTY(VisibleAnywhere, Category = "Anchors")
+	USceneComponent* FR_Anchor;
 
+	UPROPERTY(VisibleAnywhere, Category = "Anchors")
+	USceneComponent* RL_Anchor;
+
+	UPROPERTY(VisibleAnywhere, Category = "Anchors")
+	USceneComponent* RR_Anchor;
+	TArray<USceneComponent*> AllAnchors;
+	//The vehicle's tires 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	UTire* FrontLeftTire;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	UTire* FrontRightTire;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	UTire* RearLeftTire;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	UTire* RearRightTire;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	TArray<UTire*> AllTires;
 private:
 	// This function is called by the Enhanced Input System
 	void Move(const FInputActionValue& Value);
@@ -75,9 +102,12 @@ private:
 	void Input_Throttle(const FInputActionValue& Value);
 	void Input_Steering(const FInputActionValue& Value);
 	void Input_Brake(const FInputActionValue& Value);
-
+	float Acceleration;
+	float CurrentVelocity;
+	float LastVelocity;
 	float CurrentThrottle = 0.0f;
 	float CurrentSteering = 0.0f;
 	float CurrentBrake = 0.0f;
+	
 
 };

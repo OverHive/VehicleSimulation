@@ -3,16 +3,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-
+#include "Components/StaticMeshComponent.h"
+#include "Tire.generated.h"
 
 /**
  * 
  */
-class VEHICLESIMULATION_API Tire
+
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
+class VEHICLESIMULATION_API UTire : public UStaticMeshComponent
 {
+	GENERATED_BODY()
 public:
-	Tire();
-	~Tire();
+	// Sets default values for this actor's properties
+	UTire();
+	~UTire();
 	//Update the frictionCoefficient
 	void UpdateFrictionCoefficient(const float value) { FrictionCoefficient = value; }
 	//Change the radius of the tire
@@ -21,13 +26,17 @@ public:
 	void UpdateMaxTireLoad();
 	//Calculate the current tire load
 	void UpdateTireLoad();
-	//Update the vehicle fields the wheel has
+	//Update the vehicle fields the wheel has	
+	// // Called every frame
 	void UpdateVehicleParameters(const float mass, const float wheelBaseLength, const float DistanceOfCGToTireAxis, const float CGHeight);
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
-	bool isFrontTire = true;
+	bool IsFrontTire = true;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
+	bool IsOnLeft = true;
+
 private:
  
-	float gravity = 10;
+	float Gravity = 10;
 	float VehicleMass = 300;
 	float FrictionCoefficient = 0.5;
 	float TireRadius = 1;
