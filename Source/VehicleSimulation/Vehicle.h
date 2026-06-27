@@ -47,8 +47,6 @@ public:
 
 	// --- Vehicle parameters ---
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	float MovementForce = 1000000.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	float mass = 500.0f; // High value because physics needs high force
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float ThrottleForce = 500000.0f;
@@ -65,8 +63,16 @@ public:
 	float Height = 1.00;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float AirDensity = 1.20;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")	
 	float DragCoefficient = 0.30;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float WheelBaseLength = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float CentreOfGravityHeight = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float DistanceOfCentreOfGravityToTireAxis = 0.5;
+
 	// Anchor points for the tire
 	UPROPERTY(VisibleAnywhere, Category = "Anchors")
 	USceneComponent* FL_Anchor;

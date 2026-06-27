@@ -25,12 +25,12 @@ public:
 	//Calculates the maximum load the tire can bear
 	void UpdateMaxTireLoad();
 	//Calculate the current tire load
-	void UpdateTireLoad();
+	float UpdateTireLoad(const float Acceleration);
 	//Update the vehicle fields the wheel has	
 	// // Called every frame
 	void UpdateVehicleParameters(const float mass, const float wheelBaseLength, const float DistanceOfCGToTireAxis, const float CGHeight);
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
-	bool IsFrontTire = true;
+	bool IsFrontTire = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	bool IsOnLeft = true;
 
@@ -41,7 +41,6 @@ private:
 	float FrictionCoefficient = 0.5;
 	float TireRadius = 1;
 	float TireLoad = 0;
-	float Acceleration = 0.5;
 	float MaxTireLoad = 0.5;
 	float DistanceOfCentreOfGravityToTireAxis = 0.5;
 	float WheelBase = 1;

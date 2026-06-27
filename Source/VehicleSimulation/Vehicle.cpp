@@ -39,6 +39,7 @@ AVehicle::AVehicle()
     FrontLeftTire = CreateDefaultSubobject<UTire>(TEXT("FrontLeftTire"));    
     AllTires.Add(FrontLeftTire);
     FrontRightTire = CreateDefaultSubobject<UTire>(TEXT("FrontRightTire"));
+
     AllTires.Add(FrontRightTire);
     RearRightTire = CreateDefaultSubobject<UTire>(TEXT("RearRightTire"));
     AllTires.Add(RearRightTire);
@@ -53,8 +54,10 @@ AVehicle::AVehicle()
     {
         //Connect the anchor to the vehicle mesh
         AllAnchors[i]->SetupAttachment(MeshComponent);
-        //... and connect the corresponding tire to the anchor
+        //Connect the corresponding tire to the anchor
         AllTires[i]->SetupAttachment(AllAnchors[i]);
+        //
+        AllTires[i]->UpdateVehicleParameters(mass,WheelBaseLength,DistanceOfCentreOfGravityToTireAxis, CentreOfGravityHeight);
     }
 }
 
@@ -88,12 +91,12 @@ void AVehicle::Tick(float DeltaTime)
         FVector DragForce = Velocity.GetSafeNormal() *0.5* DragCoefficient*Area* AirDensity * CurrentSpeed * CurrentSpeed;
         //Subtract resistive forces from the diving force
         ForwardForce -= DragForce;
-        //Apply force through cent
-        FVector CoM = MeshComponent->GetCenterOfMass();
-        MeshComponent->AddForceAtLocation(ForwardForce, CoM);
+        //Apply the force on the vehicle
+     
+        MeshComponent->AddForce(ForwardForce, NAME_None, false);
    
 
-        //// Steering (change to incorporate wheel in future)
+        // Steering (change to incorporate wheel in future)
         FVector Torque = GetActorUpVector() * (CurrentSteering * SteeringTorque);
 
         MeshComponent->AddTorqueInDegrees(Torque, NAME_None, false);
@@ -111,12 +114,18 @@ void AVehicle::Tick(float DeltaTime)
         Acceleration = (CurrentVelocity - LastVelocity) / DeltaTime;
         //Store the current velocity of the next frame
         LastVelocity = CurrentVelocity;
+        //Display the settings
         if (GEngine)
         {
-            
-            GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Green, FString::Printf(TEXT("Direction %s"), *GetActorForwardVector().ToString()));
-            GEngine->AddOnScreenDebugMessage(2, 5.f, FColor::Green, FString::Printf(TEXT("Speed %f"), CurrentVelocity));
-            GEngine->AddOnScreenDebugMessage(3, 5.f, FColor::Green, FString::Printf(TEXT("Acceleration %f"), Acceleration));
+            GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Green, FString::Printf(TEXT("Speed %f"), CurrentVelocity));
+            GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Green, FString::Printf(TEXT("Acceleration %f"), Acceleration));
+
+            float Index = 4;
+            for (int i = 0; i < 4;i++)
+            {
+                float TireLoad = AllTires[i]->UpdateTireLoad(Acceleration);
+               GEngine->AddOnScreenDebugMessage(3+i, 3.f, FColor::Green, FString::Printf(TEXT("%s's tire load :%f"), *AllTires[i]->GetName(), TireLoad));
+            }
         }
     }
 
