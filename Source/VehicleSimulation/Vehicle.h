@@ -6,7 +6,9 @@
 #include "GameFramework/Pawn.h"
 #include "InputMappingContext.h"
 #include "Tire.h"
+#include "WheelSuspensionSetting.h"
 #include "Vehicle.generated.h"
+
 
 
 UCLASS()
@@ -22,7 +24,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -30,7 +32,10 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// --- Components ---
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UStaticMeshComponent* MeshComponent;
+	class USkeletalMeshComponent* SkeletalMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class  UStaticMeshComponent* MeshComponent;
 
 	//Input Assets
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
@@ -46,8 +51,8 @@ public:
 	UInputAction* BrakeAction;
 
 	// --- Vehicle parameters ---
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	float mass = 500.0f; // High value because physics needs high force
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
+	float VehicleMass = 500.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float ThrottleForce = 500000.0f;
 
@@ -63,7 +68,7 @@ public:
 	float Height = 1.00;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float AirDensity = 1.20;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float DragCoefficient = 0.30;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
@@ -73,19 +78,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float DistanceOfCentreOfGravityToTireAxis = 0.5;
 
-	// Anchor points for the tire
-	UPROPERTY(VisibleAnywhere, Category = "Anchors")
-	USceneComponent* FL_Anchor;
-
-	UPROPERTY(VisibleAnywhere, Category = "Anchors")
-	USceneComponent* FR_Anchor;
-
-	UPROPERTY(VisibleAnywhere, Category = "Anchors")
-	USceneComponent* RL_Anchor;
-
-	UPROPERTY(VisibleAnywhere, Category = "Anchors")
-	USceneComponent* RR_Anchor;
-	TArray<USceneComponent*> AllAnchors;
 	//The vehicle's tires 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
 	UTire* FrontLeftTire;
@@ -98,22 +90,31 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
 	UTire* RearRightTire;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
 	TArray<UTire*> AllTires;
+
+	UPROPERTY(EditAnywhere, Category = "Suspension")
+	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
+
 private:
+	//Models vehicle suspension using ray cast
+	void SuspensionRayCast();
 	// This function is called by the Enhanced Input System
 	void Move(const FInputActionValue& Value);
+	//Setup for the tires
+	void CreateTires();
 	// Stores the input from the joystick/WASD
 	FVector2D CurrentInputDirection;
 	void Input_Throttle(const FInputActionValue& Value);
 	void Input_Steering(const FInputActionValue& Value);
 	void Input_Brake(const FInputActionValue& Value);
-	float Acceleration;
-	float CurrentVelocity;
-	float LastVelocity;
+	float Acceleration = 0.0f;
+	float CurrentVelocity = 0.0f;
+	float LastVelocity = 0.0f;
 	float CurrentThrottle = 0.0f;
 	float CurrentSteering = 0.0f;
 	float CurrentBrake = 0.0f;
-	
+	float CurrentMass = 500.0f;
+	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
 
 };
