@@ -3,16 +3,17 @@
 
 #include "Tire.h"
 
+
 UTire::UTire()
 {
 }
 
-void UTire::UpdateMaxTireLoad()
+void UTire::UpdateMaxTraction()
 {
-	MaxTireLoad = FrictionCoefficient * SpringForce.Z;
+	MaximumWheelTraction = FrictionCoefficient * TireLoad;
 }
 
-float UTire::UpdateTireLoad(float Acceleration)
+void UTire::UpdateTireLoad(float Acceleration)
 {
 	//Calculate the change in tire load based on the force acting on the vehicle by 
 	//multiplying  the ratio between the height of the vehicle's centre of gravity 
@@ -23,7 +24,7 @@ float UTire::UpdateTireLoad(float Acceleration)
 	//Calculate the default weight acting on the tire by multiply the ratio between the tire's axis
 	//to the vehicle's centre of gravity and the wheelbase by the
 	//vehicle's weight (calculated using force = mass * acceleration due to gravity)
-	float DefaultTireLoad = WheelBase > 0 ? (DistanceOfCentreOfGravityToTireAxis / WheelBase) * (VehicleMass * Gravity):0;
+	float DefaultTireLoad = WheelBase > 0 ? /*(DistanceOfCentreOfGravityToTireAxis / WheelBase) **/ NormalForce.Size() : 0;
 	//Apply the change in load based on the position of the tire 
 	TireLoad =  DefaultTireLoad + (IsFrontTire?-1:1)*ChangeInTireLoad;
 	//Prevent negative tire load
@@ -31,7 +32,8 @@ float UTire::UpdateTireLoad(float Acceleration)
 	{
 		TireLoad = 0;
 	}
-	return TireLoad/2;
+	//Update the maximum traction force on the tire with the new tire load
+	UpdateMaxTraction();
 }
 
 void UTire::UpdateVehicleParameters(const float mass, const float wheelBaseLength, const float DistanceOfCGToTireAxis, const float CGHeight)
@@ -45,10 +47,15 @@ void UTire::UpdateVehicleParameters(const float mass, const float wheelBaseLengt
 
 void UTire::UpdateWheelSuspension(const FVector NewSpringForce, const FVector NewHitLocation)
 {
-	SpringForce = NewSpringForce;
-	HitLocation = NewHitLocation;
+	NormalForce = NewSpringForce;
+	ContactPoint = NewHitLocation;
 }
 
 UTire::~UTire()
 {
+}
+
+float UTire::GetTraction(const float ThrottleForce) const
+{
+		return IsFrontTire&& IsGrounded ? FMath::Clamp(ThrottleForce / 20.f, -MaximumWheelTraction, MaximumWheelTraction):0;
 }
