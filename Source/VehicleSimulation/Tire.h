@@ -30,6 +30,10 @@ public:
 	void UpdateTireRadius(const float value) { TireRadius = value; }
 	//Calculates the maximum load the tire can bear
 	void UpdateMaxTraction();
+	//Gets the lateral grip of the tire
+	const float GetLateralGrip();
+	//Updates the steering direction of the tire
+	void UpdateSteering(const int NewAngle);
 	//Update the vehicle fields the wheel has	
 	void UpdateVehicleParameters(const float mass, const float wheelBaseLength, const float DistanceOfCGToTireAxis, const float CGHeight);
 	//Updates the wheel's suspension
@@ -37,6 +41,8 @@ public:
 	//Calculate the current tire load
 	void UpdateTireLoad(const float Acceleration);
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
+	float SteerAngle = 0.0f;   // degrees, yaw relative to the chassis
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	bool IsFrontTire = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")

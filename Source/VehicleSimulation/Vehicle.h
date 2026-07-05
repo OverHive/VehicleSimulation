@@ -77,6 +77,12 @@ public:
 	float CentreOfGravityHeight = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float DistanceOfCentreOfGravityToTireAxis = 0.5;
+	//Vehicle steering
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
+	float MaxSteeringAngle = 35.0f;      // degrees at full lock
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
+	float SteeringInterpSpeed = 5.0f;    // how fast the wheels swing to the target
 
 	//The vehicle's tires 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
@@ -115,6 +121,7 @@ private:
 	float CurrentSteering = 0.0f;
 	float CurrentBrake = 0.0f;
 	float CurrentMass = 500.0f;
+	float CurrentSteeringAngle = 0.0f;
 	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
 
 };

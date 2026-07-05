@@ -72,13 +72,14 @@ void AVehicle::BeginPlay()
 void AVehicle::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	CurrentSteeringAngle = FMath::FInterpTo(CurrentSteeringAngle, CurrentSteering * MaxSteeringAngle, DeltaTime, SteeringInterpSpeed);
 	//Update the suspension
 	SuspensionRayCast();
 	//Calculate the drive force
 	// Apply force each frame based on stored input
 	if (MeshComponent)
 	{
-	
+
 		// Throttle
 		//FVector ForwardForce = GetActorForwardVector() * (CurrentThrottle * ThrottleForce);
 		//Calculate drag using: Drag force = 0.5*drag Coefficient*Area*air density* speed^2
@@ -88,15 +89,9 @@ void AVehicle::Tick(float DeltaTime)
 		//Convert from cm/s to m/s
 		FVector DragForce = -Velocity.GetSafeNormal() * 0.005 * DragCoefficient * Area * AirDensity * CurrentSpeed * CurrentSpeed;
 		//Subtract resistive forces from the diving force
-		/*ForwardForce -= DragForce;*/
-		//Apply the force on the vehicle
-
+		//Apply the drag on the vehicle
 		MeshComponent->AddForce(DragForce, NAME_None, false);
 
-		// Steering (change to incorporate wheel in future)
-		FVector Torque = GetActorUpVector() * (CurrentSteering * SteeringTorque);
-
-		MeshComponent->AddTorqueInDegrees(Torque, NAME_None, false);
 		//
 		// Braking
 		if (CurrentBrake > 0.0f)
@@ -108,7 +103,7 @@ void AVehicle::Tick(float DeltaTime)
 
 		CurrentVelocity = CurrentSpeed;
 		//Calculate acceleration with acceleration = change in velocity/change in time
-		Acceleration = ((CurrentVelocity - LastVelocity) / DeltaTime) ;
+		Acceleration = ((CurrentVelocity - LastVelocity) / DeltaTime);
 		//Store the current velocity of the next frame
 		LastVelocity = CurrentVelocity;
 		//Display the settings
@@ -120,14 +115,41 @@ void AVehicle::Tick(float DeltaTime)
 
 		for (int i = 0; i < AllTires.Num(); i++)
 		{
-			if (AllTires[i])
+			UTire* Tire = AllTires[i];
+			//If we have a vaild tire
+			if (Tire && Tire->IsGrounded)
 			{
+				//Update the steering of the wheel
+				Tire->UpdateSteering(CurrentSteeringAngle);
+				//Get the direction of the wheel
+				FVector WheelForward = GetActorForwardVector()
+					.RotateAngleAxis(Tire->SteerAngle, MeshComponent->GetUpVector());
 				// Update and apply the traction from the wheels
-				AllTires[i]->UpdateTireLoad(Acceleration);
-				MeshComponent->AddForceAtLocation(AllTires[i]->GetTraction(CurrentThrottle * ThrottleForce) * GetActorForwardVector(), AllTires[i]->ContactPoint);
-				float TireLoad = AllTires[i]->TireLoad;
+				Tire->UpdateTireLoad(Acceleration);
+				MeshComponent->AddForceAtLocation(Tire->GetTraction(CurrentThrottle * ThrottleForce) * WheelForward, Tire->ContactPoint);
+	
+				////Get 
+				//FVector WheelRight = FVector::CrossProduct(MeshComponent->GetUpVector(), WheelForward);
+				////Get the wheel's velocity
+				//FVector VelocityAtWheel = MeshComponent->GetPhysicsLinearVelocityAtPoint(Tire->ContactPoint);
+				//
+				////Calculate the lateral speed
+				//float LateralSpeed = FVector::DotProduct(VelocityAtWheel, WheelRight);
+
+
+				//// Force opposing sideways slip, capped by the tire's grip
+				//// replace with Lateral Force calculated with the Magic Formula
+				//float DesiredForce = -LateralSpeed * Tire->GetLateralGrip();
+
+				//float MaxGrip = Tire->TireLoad * 0.5f;              // or expose FrictionCoefficient from UTire
+				//FVector LateralFriction = WheelRight * FMath::Clamp(DesiredForce, -MaxGrip, MaxGrip);
+
+				//MeshComponent->AddForceAtLocation(LateralFriction, Tire->ContactPoint);
+
+
+				float TireLoad = Tire->TireLoad;
 				if (GEngine)
-					GEngine->AddOnScreenDebugMessage(3 + i, 3.f, FColor::Green, FString::Printf(TEXT("%s's tire load :%f N"), *AllTires[i]->GetName(), TireLoad));
+					GEngine->AddOnScreenDebugMessage(3 + i, 3.f, FColor::Green, FString::Printf(TEXT("%s's tire load :%f N"), *Tire->GetName(), TireLoad));
 			}
 		}
 	}
@@ -158,20 +180,20 @@ void AVehicle::SuspensionRayCast()
 		{
 			//Calculate compression using distance from mount point to the ground hit point
 			float CurrentDistance = FVector::Dist(StartLocation, Hit.Location);
-			
+
 			//Calculate the spring compression using the difference between the suspension length and the bottom of the wheel
 			float Compression = Wheel.SuspensionLength - (CurrentDistance - Wheel.WheelRadius);
-		
+
 
 			// Clamp compression to prevent negative values/extreme forces
-			Compression = FMath::Max(0.0f, Compression);	
+			Compression = FMath::Max(0.0f, Compression);
 			//If we have a no compression then the tire is in air and has no load 
 			if (Compression <= 0)
 			{
 				Tire->IsGrounded = false;
 				continue;
 			}
-				Tire->IsGrounded = true;
+			Tire->IsGrounded = true;
 
 
 			//Calculate Spring Force (Hooke's Law)

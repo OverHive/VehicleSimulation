@@ -13,6 +13,22 @@ void UTire::UpdateMaxTraction()
 	MaximumWheelTraction = FrictionCoefficient * TireLoad;
 }
 
+const float UTire::GetLateralGrip()
+{
+	return FrictionCoefficient * TireLoad;
+}
+
+void UTire::UpdateSteering(const int NewAngle)
+{
+
+	//Only allow steering from the front tires
+	SteerAngle = IsFrontTire?NewAngle:0;
+	//Rotate the tire to the new steer angle
+	if(IsFrontTire)
+	SetRelativeRotation(FRotator(0.0f,SteerAngle, 0.0f));
+
+}
+
 void UTire::UpdateTireLoad(float Acceleration)
 {
 	//Calculate the change in tire load based on the force acting on the vehicle by 
@@ -57,5 +73,5 @@ UTire::~UTire()
 
 float UTire::GetTraction(const float ThrottleForce) const
 {
-		return IsFrontTire&& IsGrounded ? FMath::Clamp(ThrottleForce / 20.f, -MaximumWheelTraction, MaximumWheelTraction):0;
+		return IsFrontTire&& IsGrounded ? FMath::Clamp(ThrottleForce / 2.f, -MaximumWheelTraction, MaximumWheelTraction):0;
 }
