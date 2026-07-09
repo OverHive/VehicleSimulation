@@ -79,6 +79,8 @@ public:
 	float DistanceOfCentreOfGravityToRearAxis = 45.0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float FinalGearRatio = 5.6;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float TrackWidth = 140.0f;
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float MaxSteeringAngle = 35.0f;      // degrees at full lock
@@ -125,9 +127,8 @@ private:
 	void Input_Throttle(const FInputActionValue& Value);
 	void Input_Steering(const FInputActionValue& Value);
 	void Input_Brake(const FInputActionValue& Value);
-	float Acceleration = 0.0f;
-	float CurrentVelocity = 0.0f;
-	float LastVelocity = 0.0f;
+	FVector CurrentVelocity = FVector::ZeroVector;
+	FVector LastVelocity = FVector::ZeroVector;
 	float CurrentThrottle = 0.0f;
 	float CurrentSteering = 0.0f;
 	float CurrentBrake = 0.0f;

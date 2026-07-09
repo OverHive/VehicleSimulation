@@ -43,9 +43,10 @@ AVehicle::AVehicle()
 
 		//Create the back tires
 		RearRightTire = CreateDefaultSubobject<UTire>(TEXT("Rear-Right Tire"));
-
+		RearRightTire->IsRightTire = true;
 
 		RearLeftTire = CreateDefaultSubobject<UTire>(TEXT("Rear-Left Tire"));
+		RearLeftTire->IsRightTire = true;
 		CreateTires();
 	}
 }
@@ -106,9 +107,9 @@ void AVehicle::Tick(float DeltaTime)
 	{
 
 
-		FVector Velocity = MeshComponent->GetPhysicsLinearVelocity();
+		CurrentVelocity = MeshComponent->GetPhysicsLinearVelocity();
 
-		CalculateResistiveForce(Velocity);
+		CalculateResistiveForce(CurrentVelocity);
 		// Braking
 		if (CurrentBrake > 0.0f)
 		{
@@ -117,16 +118,23 @@ void AVehicle::Tick(float DeltaTime)
 		}
 		//Update the HUD parameters
 
-		CurrentVelocity = FVector::DotProduct(Velocity, GetActorForwardVector());
+		
 		//Calculate acceleration with acceleration = change in velocity/change in time
-		Acceleration = ((CurrentVelocity - LastVelocity) / DeltaTime);
+		FVector Acceleration = ((CurrentVelocity - LastVelocity) / DeltaTime);
+		//Calculate the longitudinal and lateral acceleration
+		float LongitudinalAcceleration = FVector::DotProduct(Acceleration, GetActorForwardVector());
+		float LateralAcceleration = FVector::DotProduct(Acceleration, GetActorRightVector());
 		//Store the current velocity of the next frame
 		LastVelocity = CurrentVelocity;
 		//Display the settings
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Green, FString::Printf(TEXT("Speed %f km/h"), CurrentVelocity * 0.036));
-			GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Green, FString::Printf(TEXT("Acceleration %f m/s^2"), Acceleration * 0.01));
+			FVector XYVelocity = CurrentVelocity;
+			XYVelocity.Z = 0;
+			FVector XYAcceleration = Acceleration;
+			XYAcceleration.Z = 0;
+			GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Green, FString::Printf(TEXT("Speed %f km/h"), XYVelocity.Size() * 0.036));
+			GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Green, FString::Printf(TEXT("Acceleration %f m/s^2"), XYAcceleration.Size() * 0.01));
 		}
 
 		for (int i = 0; i < AllTires.Num(); i++)
@@ -141,10 +149,10 @@ void AVehicle::Tick(float DeltaTime)
 				//Get the direction of the wheel
 				FVector WheelForward = Tire->GetForwardVector();
 				// Update and apply the traction from the wheels
-				Tire->UpdateTireLoad(Acceleration);
+				Tire->UpdateTireLoad(LongitudinalAcceleration, LateralAcceleration);
 				MeshComponent->AddForceAtLocation(Tire->GetTraction(CurrentThrottle * ThrottleForce) * WheelForward, SocketLocation);
 	
-				////Get 
+				//Get 
 				FVector WheelRight = FVector::CrossProduct(MeshComponent->GetUpVector(), WheelForward);
 				//Get the wheel's velocity
 				FVector VelocityAtWheel = MeshComponent->GetPhysicsLinearVelocityAtPoint(SocketLocation);
@@ -306,7 +314,7 @@ void AVehicle::CreateTires()
 				FName(socketNames[i])
 			);
 			AllTires[i]->UpdateFrictionCoefficient(1.0);
-			AllTires[i]->UpdateVehicleParameters(VehicleMass, WheelBaseLength, DistanceOfCentreOfGravityToFrontAxis, DistanceOfCentreOfGravityToRearAxis, CentreOfGravityHeight);
+			AllTires[i]->UpdateVehicleParameters(VehicleMass, WheelBaseLength,TrackWidth, DistanceOfCentreOfGravityToFrontAxis, DistanceOfCentreOfGravityToRearAxis, CentreOfGravityHeight);
 			//Store the socket name with wheel
 			AllTires[i]->SocketName = socketNames[i];
 		}

@@ -35,13 +35,13 @@ public:
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
 	//Update the vehicle fields the wheel has	
-	void UpdateVehicleParameters(const float mass, const float wheelBaseLength, const float DistanceOfCGToFrontAxis, const float DistanceOfCGToRearAxis, const float CGHeight);
+	void UpdateVehicleParameters(const float mass, const float wheelBaseLength,const float trackWidth, const float DistanceOfCGToFrontAxis, const float DistanceOfCGToRearAxis, const float CGHeight);
 	//Update the suspension setting of the wheels
 	void UpdateSuspension(const float stiffness, const float damping, const float SuspensionLength = 50.0);
 	//Updates the wheel's suspension
 	void UpdateWheelSuspension(const FVector NewSpringForce, const  FVector NewHitLocation);
 	//Calculate the current tire load
-	void UpdateTireLoad(const float Acceleration);
+	void UpdateTireLoad(const float LongitudinalAcceleration, const float LateralAcceleration);
 	//Calculate the rolling resistance
 	float GetRollingResistance();
 
@@ -50,6 +50,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	bool IsFrontTire = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
+	bool IsRightTire = false;
 	//For calculating rolling resistance
 	float RollingResistanceCoefficient = 0.015f; 
 	FName SocketName;
@@ -59,10 +60,13 @@ public:
 	bool IsGrounded = false;
 private:
  
-	float Gravity = 9.81;
+	float Gravity = 981;
 	float VehicleMass = 300;
+	float BaseTireLoad = 0;
+	float VehicleWeight = 300000;
 	float FrictionCoefficient = 1.4;
 	float TireRadius = 1;
+	float TrackWidth = 0;
 
 	float MaximumWheelTraction = 0.5;
 	float DistanceOfCentreOfGravityToTireAxis = 0.5;
