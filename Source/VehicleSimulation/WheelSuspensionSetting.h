@@ -20,10 +20,10 @@ struct VEHICLESIMULATION_API FWheelSuspensionSetting
     float SuspensionLength = 50.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    float SpringStiffness = 50000.0f;
+    float SpringStiffness = 14300.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    float DampingCoefficient = 2000.0f;
+    float DampingCoefficient = 1400.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float WheelRadius = 20.0f;

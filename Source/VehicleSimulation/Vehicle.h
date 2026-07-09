@@ -12,6 +12,7 @@
 
 
 UCLASS()
+//Note
 class VEHICLESIMULATION_API AVehicle : public APawn
 {
 	GENERATED_BODY()
@@ -52,12 +53,9 @@ public:
 
 	// --- Vehicle parameters ---
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float VehicleMass = 500.0f;
+	float VehicleMass = 150.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float ThrottleForce = 500000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float SteeringTorque = 20000000.0f;
+	float ThrottleForce = 30000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float BrakeForce = 300000.0f;
@@ -72,17 +70,28 @@ public:
 	float DragCoefficient = 0.30;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float WheelBaseLength = 1;
+	float WheelBaseLength = 107.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float CentreOfGravityHeight = 1;
+	float CentreOfGravityHeight = 30.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float DistanceOfCentreOfGravityToTireAxis = 0.5;
+	float DistanceOfCentreOfGravityToFrontAxis = 59.0;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float DistanceOfCentreOfGravityToRearAxis = 45.0;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float FinalGearRatio = 5.6;
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float MaxSteeringAngle = 35.0f;      // degrees at full lock
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
+	float AngularDampingWhenSteeringReleased = 2.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
-	float SteeringInterpSpeed = 5.0f;    // how fast the wheels swing to the target
+	float SteeringReleaseThreshold = 0.1f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
+	float SteeringInterpSpeed = 5.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
+	float SelfAligningTorqueCoefficient = 5000.0f;  // Caster effect strength
 
 	//The vehicle's tires 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
@@ -109,6 +118,8 @@ private:
 	void Move(const FInputActionValue& Value);
 	//Setup for the tires
 	void CreateTires();
+	//Calculates the resistive force
+	void CalculateResistiveForce(FVector Velocity);
 	// Stores the input from the joystick/WASD
 	FVector2D CurrentInputDirection;
 	void Input_Throttle(const FInputActionValue& Value);
