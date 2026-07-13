@@ -31,21 +31,25 @@ void UTire::UpdateSteering(const float NewAngle)
 
 void UTire::UpdateTireLoad(const float LongitudinalAcceleration, const float LateralAcceleration)
 {
-	//Calculate the change in tire load based on tire positions
-
+	float StaticTireLoad = (VehicleWeight / 2) * DistanceOfCentreOfGravityToTireAxis / WheelBase;
+	//Start with default load on the tire
+	float DynamicTireLoad = StaticTireLoad;
 	//Calculate the longitudinal change in tire load 
 	float LongitudinalForceOnVehicle = LongitudinalAcceleration * VehicleMass;
-	float LongitudinalChangeInTireLoad = WheelBase > 0 ? (CentreOfGravityHeight / WheelBase) * (IsFrontTire ? -1 : 1) * LongitudinalForceOnVehicle : 0;
+	float LongitudinalChangeInTireLoad = WheelBase > 0 ? LongitudinalForceOnVehicle * (CentreOfGravityHeight / WheelBase) * (IsFrontTire ? -1 : 1)/2 : 0;
 
 	//Calculate the lateral change in tire load 
 	float LateralForceOnVehicle = LateralAcceleration * VehicleMass;
-	float LateralChangeInTireLoad = TrackWidth > 0 ? (IsRightTire ? 1 : -1) * LateralForceOnVehicle * CentreOfGravityHeight / TrackWidth : 0;
-	//Calculate the default weight acting on the tire
-	float DefaultTireLoad = NormalForce.Size();//WheelBase > 0 ? (DistanceOfCentreOfGravityToTireAxis / WheelBase)*BaseTireLoad : 0;  : 0;
-	//Apply the change in load 
-	TireLoad = FMath::Max(0.0f, DefaultTireLoad + LongitudinalChangeInTireLoad + LateralChangeInTireLoad);
+	float LateralChangeInTireLoad = TrackWidth > 0 ? LateralForceOnVehicle * (CentreOfGravityHeight / TrackWidth) * (IsRightTire ? 1 : -1) /2 : 0;
+
+
+
+	//Calculate  weight acting on the tire
+	DynamicTireLoad += LongitudinalChangeInTireLoad + LateralChangeInTireLoad;
+	//Clamp the value into a vaild range
+	TireLoad = FMath::Max(0.0f, DynamicTireLoad);
 	//Prevent negative tire load and tire load for aerial tires
-	if (TireLoad < 0 || !IsGrounded)
+	if (!IsGrounded)
 	{
 		TireLoad = 0;
 	}
@@ -53,7 +57,29 @@ void UTire::UpdateTireLoad(const float LongitudinalAcceleration, const float Lat
 	UpdateMaxTraction();
 }
 
-float UTire::GetRollingResistance()
+void UTire::UpdateWheelRotationalVelocity(const float VehicleSpeed)
+{
+	//If the tire is in the air enter free rotation
+	if (!IsGrounded)
+	{
+		WheelRotationalVelocity *= WheelDamper;
+		return;
+	}
+	//Calculate the rotational velocity of the wheel
+	float TargetRotationalVelocity = VehicleSpeed / (SuspensionSettings.WheelRadius / 100.0f);
+	//
+	WheelRotationalVelocity = FMath::Lerp(WheelRotationalVelocity, TargetRotationalVelocity, CouplingFactor);
+}
+
+void UTire::ApplyBrakes(const float AppliedBrakeTorque, const float DeltaTime)
+{
+	float AngularAcceleration = -AppliedBrakeTorque / WheelRotationalInertia;
+	//Update the rotational velocity
+	WheelRotationalVelocity = FMath::Max(0.0f, WheelRotationalVelocity - AngularAcceleration * DeltaTime);
+}
+
+
+float UTire::GetRollingResistance() const
 {
 	return TireLoad * RollingResistanceCoefficient;
 }
@@ -82,7 +108,6 @@ void UTire::UpdateSuspension(const float stiffness, const float damping, const f
 
 void UTire::UpdateWheelSuspension(const FVector NewSpringForce, const FVector NewHitLocation)
 {
-	const float LoadFactor = TireLoad / VehicleWeight;
 	NormalForce = NewSpringForce;
 	ContactPoint = NewHitLocation;
 }
@@ -94,4 +119,12 @@ UTire::~UTire()
 float UTire::GetTraction(const float ThrottleForce) const
 {
 	return IsFrontTire && IsGrounded ? FMath::Clamp(ThrottleForce / 2.f, -MaximumWheelTraction, MaximumWheelTraction) : 0;
+}
+
+float UTire::GetWheelBrakingForce(const float BrakingForce)
+{
+	//Calculate the Tire ratio
+	float TireLoadRatio = TireLoad / (BaseTireLoad>0?BaseTireLoad:TireLoad);
+	//Apply the ratio to the braking force
+	return TireLoadRatio*BrakingForce;
 }

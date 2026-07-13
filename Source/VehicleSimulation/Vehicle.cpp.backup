@@ -155,8 +155,7 @@ void AVehicle::Tick(float DeltaTime)
 				FVector VelocityAtWheel = MeshComponent->GetPhysicsLinearVelocityAtPoint(SocketLocation);
 
 				//Apply braking
-				float VehicleSpeedAtWheel = FVector::DotProduct(CurrentVelocity, WheelForward);
-				if (CurrentBrake > 0.0f && Tire->IsGrounded && FMath::Abs(VehicleSpeedAtWheel) > 1.0f)
+				if (CurrentBrake > 0.0f && Tire->IsGrounded)
 				{
 					// Get wheel velocity direction
 					FVector WheelVelocity = MeshComponent->GetPhysicsLinearVelocityAtPoint(SocketLocation);
@@ -166,7 +165,7 @@ void AVehicle::Tick(float DeltaTime)
 
 					//Get the wheel speed
 					float WheelSurfaceSpeed = Tire->GetRotationalVelocity();
-
+					float VehicleSpeedAtWheel = FVector::DotProduct(CurrentVelocity, WheelForward);
 					//Calculated the tire slip ratio
 
 					float SlipRatio = FMath::Abs(VehicleSpeedAtWheel) > 0.1f ?
@@ -184,9 +183,8 @@ void AVehicle::Tick(float DeltaTime)
 					float MaxBrakingForce = Tire->TireLoad * OptimalBrakingSlip; // 80% of tire load as max braking
 					float ActualBrakingForce = MaxBrakingForce * SlipEffectiveness;
 
-					// Apply braking force at contact point in the opposite  direction to the velocity
-					float VelocityDirection = FMath::Sign(VehicleSpeedAtWheel);
-					FVector BrakingForce = -WheelForward * ActualBrakingForce* VelocityDirection;
+					// Apply braking force at contact point
+					FVector BrakingForce = -WheelForward * ActualBrakingForce;
 
 					MeshComponent->AddForceAtLocation(BrakingForce, Tire->ContactPoint);
 

@@ -58,7 +58,7 @@ public:
 	float ThrottleForce = 30000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float BrakeForce = 300000.0f;
+	float MaxBrakeTorque = 5000.0f;
 	//For calculating drag
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float Width = 1.00;
@@ -76,11 +76,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float DistanceOfCentreOfGravityToFrontAxis = 59.0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float DistanceOfCentreOfGravityToRearAxis = 45.0;
+	float DistanceOfCentreOfGravityToRearAxis = 48.0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float FinalGearRatio = 5.6;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float TrackWidth = 140.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float OptimalBrakingSlip = 0.8f;
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float MaxSteeringAngle = 35.0f;      // degrees at full lock

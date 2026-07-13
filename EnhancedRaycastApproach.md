@@ -30,6 +30,55 @@ TireLoad = FMath::Max(NormalForce.Size(), VehicleMass * 980 / 4);
 
 ## Key Enhancements
 
+### ⚠️ CRITICAL BUG FIX: Double-Counting Weight
+
+**Issue Found (2026-07-10):** The sum of tire loads exceeded total vehicle weight when stationary.
+
+**Root Cause:** Circular dependency in tire load calculation:
+```cpp
+// WRONG - This double-counts weight!
+float LoadFromSuspension = NormalForce.Size();
+DynamicTireLoad += LoadFromSuspension;
+```
+
+**The Problem:**
+1. Static weight distribution calculates theoretical load
+2. Suspension spring force is then ADDED to this load
+3. But spring force IS the ground reaction supporting that same weight
+4. Result: Weight is counted twice!
+
+**Correct Physics:**
+- Tire load = theoretical distribution from weight transfer
+- Spring force = actual ground reaction force
+- At equilibrium: `Σ(spring forces) = vehicle_weight`
+- Spring force is the **result**, not an **input** to load calculation
+
+**Fix:**
+```cpp
+// In UpdateTireLoad() - REMOVE any suspension force addition
+// Tire load comes from weight distribution ONLY
+// Spring force naturally converges to match this load
+
+void UTire::UpdateWheelSuspension(const FVector NewSpringForce, const FVector NewHitLocation)
+{
+    // Spring force IS the normal force - don't scale it!
+    NormalForce = NewSpringForce;  // NOT: LoadFactor * NewSpringForce
+    ContactPoint = NewHitLocation;
+}
+```
+
+**Verification:**
+When stationary on level ground:
+```cpp
+float TotalTireLoad = 0.0f;
+float TotalSpringForce = 0.0f;
+for (UTire* Tire : AllTires) {
+    TotalTireLoad += Tire->TireLoad;
+    TotalSpringForce += Tire->NormalForce.Size();
+}
+// Both should equal VehicleWeight (within 1-2% tolerance)
+```
+
 ### 1. Proper Weight Transfer Calculation
 
 Instead of static weight distribution, calculate dynamic weight transfer based on vehicle accelerations.
@@ -92,6 +141,15 @@ float LateralVelocity = FVector::DotProduct(Velocity, RightVector);
 float LateralAccel = (LateralVelocity - LastLateralVelocity) / DeltaTime;
 ```
 
+### 5. Unit Consistency
+
+**Critical Implementation Detail:** Unreal Engine uses centimeters for distance measurements. The weight transfer formula `ΔF_z = (m * a * h_cg) / wheelbase` works correctly in any consistent unit system:
+
+- **Unreal units:** Mass (kg), Acceleration (cm/s²), Height (cm), Distance (cm) → Force (kg·cm/s²)
+- **SI units:** Mass (kg), Acceleration (m/s²), Height (m), Distance (m) → Force (kg·m/s² = N)
+
+**Key Point:** Do NOT convert acceleration to m/s². Use cm/s² throughout to match Unreal's coordinate system. The weight transfer magnitude is relative and will be correct as long as all units are consistent.
+
 ## Implementation Details
 
 ### Enhanced Raycast Flow
@@ -137,42 +195,51 @@ void UTire::UpdateTireLoad(float LongitudinalAccel, float LateralAccel, float Tr
 {
     // Static weight distribution (baseline)
     float StaticWeight = (VehicleMass * Gravity) / 4.0f;
-    
-    // Weight transfer calculations
+
+    // Validate inputs to prevent division by zero
+    if (StaticWeight <= 0.0f || WheelBase <= 0.0f || TrackWidth <= 0.0f) {
+        TireLoad = 0.0f;
+        return;
+    }
+
+    // Weight transfer calculations (using consistent units - cm/s² for acceleration)
+    // Formula: ΔF_z = (m * a * h_cg) / distance
+    // This works in any consistent unit system (cm, kg, cm/s² → kg·cm/s² = dyne)
     float LongitudinalTransfer = (VehicleMass * LongitudinalAccel * CentreOfGravityHeight) / WheelBase;
     float LateralTransfer = (VehicleMass * LateralAccel * CentreOfGravityHeight) / TrackWidth;
-    
-    // Apply transfers based on tire position
-    float PositionFactor = 1.0f;
-    
-    // Front/Rear effect (longitudinal)
+
+    // Start with static weight as baseline
+    float DynamicTireLoad = StaticWeight;
+
+    // Apply longitudinal transfer (divide by 2 for front/rear distribution)
+    // During acceleration (+a_x): front tires lose load, rear tires gain load
+    // During braking (-a_x): front tires gain load, rear tires lose load
     if (IsFrontTire) {
-        // Front tires lose load during acceleration, gain during braking
-        PositionFactor -= LongitudinalTransfer / StaticWeight;
+        DynamicTireLoad -= LongitudinalTransfer / 2.0f;
     } else {
-        // Rear tires gain load during acceleration, lose during braking
-        PositionFactor += LongitudinalTransfer / StaticWeight;
+        DynamicTireLoad += LongitudinalTransfer / 2.0f;
     }
-    
-    // Left/Right effect (lateral)
+
+    // Apply lateral transfer (divide by 2 for left/right distribution)
+    // During right turn (+a_y): left tires lose load, right tires gain load
+    // During left turn (-a_y): left tires gain load, right tires lose load
     if (IsLeftTire) {
-        // Left tires lose load during right turns, gain during left turns
-        PositionFactor -= LateralTransfer / StaticWeight;
+        DynamicTireLoad -= LateralTransfer / 2.0f;
     } else {
-        // Right tires gain load during right turns, lose during left turns  
-        PositionFactor += LateralTransfer / StaticWeight;
+        DynamicTireLoad += LateralTransfer / 2.0f;
     }
-    
-    // Calculate final load combining static weight, weight transfer, and suspension
-    float LoadFromWeightTransfer = StaticWeight * PositionFactor;
-    float LoadFromSuspension = NormalForce.Size(); // Spring force pushing up
-    
-    // Combine both effects
-    TireLoad = FMath::Max(0.0f, LoadFromWeightTransfer + LoadFromSuspension);
-    
-    // Clamp to prevent negative loads when airborne
+
+    // CRITICAL: DO NOT add suspension force here!
+    // The spring force IS the ground reaction force - it's the RESULT, not an INPUT
+    // Tire load is calculated from weight distribution only
+    // The suspension force will naturally equal this load at equilibrium
+
+    // Clamp to prevent negative loads when airborne or during extreme weight transfer
+    TireLoad = FMath::Max(0.0f, DynamicTireLoad);
+
+    // Zero load when not grounded
     if (!IsGrounded) TireLoad = 0.0f;
-    
+
     // Update maximum traction based on new load
     UpdateMaxTraction();
 }
@@ -185,15 +252,19 @@ Update the physics loop to calculate both accelerations:
 ```cpp
 // In Vehicle::Tick(), add lateral acceleration tracking
 
-// Existing longitudinal acceleration
-float LongitudinalAccel = ((CurrentVelocity - LastVelocity) / DeltaTime) * 0.01f; // m/s²
+// IMPORTANT: Unreal uses cm/s for velocity, so we need consistent units
+// For weight transfer formulas, use cm/s² throughout (no conversion needed)
+// The formula: ΔF = (m * a * h_cg) / wheelbase works in any consistent unit system
 
-// Add lateral acceleration calculation
+// Longitudinal acceleration (cm/s² - consistent with Unreal units)
+float LongitudinalAccel = (CurrentVelocity - LastVelocity) / DeltaTime;
+
+// Lateral acceleration calculation
 FVector Velocity = MeshComponent->GetPhysicsLinearVelocity();
-FVector RightVector = GetActorRightVector();  
+FVector RightVector = GetActorRightVector();
 float LateralVel = FVector::DotProduct(Velocity, RightVector);
 static float LastLateralVel = 0.0f;
-float LateralAccel = ((LateralVel - LastLateralVel) / DeltaTime) * 0.01f; // m/s²
+float LateralAccel = (LateralVel - LastLateralVel) / DeltaTime; // cm/s²
 LastLateralVel = LateralVel;
 
 // Update each tire with proper accelerations
@@ -356,6 +427,22 @@ if (GEngine) {
 
 ## Common Issues and Solutions
 
+### 🚨 CRITICAL: Sum of Tire Loads Exceeds Vehicle Weight
+**Cause:** Adding suspension spring force to tire load calculation (circular dependency)
+**Symptoms:**
+- Sum of all tire loads > vehicle weight when stationary
+- Unrealistically high traction values
+- Vehicle behaves like it's heavier than it is
+**Solution:**
+```cpp
+// WRONG - DO NOT do this:
+DynamicTireLoad += NormalForce.Size();
+
+// CORRECT - Tire load comes from weight distribution only:
+DynamicTireLoad = StaticWeight + LongitudinalTransfer + LateralTransfer;
+```
+**Verification:** Check that `Σ(tire loads) ≈ vehicle_weight` when stationary on level ground
+
 ### Issue: Negative Tire Loads
 **Cause**: Excessive weight transfer during extreme maneuvers
 **Solution**: Clamp tire loads to zero, consider aero effects
@@ -372,6 +459,15 @@ if (GEngine) {
 **Cause**: Suspension force dominating weight transfer
 **Solution**: Balance suspension contribution vs weight transfer
 
+### Issue: Weight Transfer Too Small/Large
+**Cause**: Unit inconsistency in acceleration calculations
+**Solution**: Ensure all calculations use consistent units (cm/s² in Unreal)
+**Verification**: Check that acceleration values are NOT converted to m/s²
+
+### Issue: Crash During Initialization
+**Cause**: Division by zero when vehicle mass or dimensions are 0
+**Solution**: Add validation checks at the start of UpdateTireLoad()
+
 ## Next Steps
 
 1. **Implement basic enhancements** - Get weight transfer working
@@ -379,8 +475,49 @@ if (GEngine) {
 3. **Tune parameters** - Adjust for realistic feel
 4. **Add advanced features** - Progressive grip, aero effects (optional)
 
+## Verification Checklist
+
+Before deploying, verify your implementation with these checks:
+
+### ✅ Unit Consistency
+- [ ] Acceleration calculations use cm/s² (NOT converted to m/s²)
+- [ ] All distances (CG height, wheelbase, track width) are in same units
+- [ ] Weight transfer produces reasonable magnitudes (not 100x too small/large)
+
+### ✅ Load Distribution
+- [ ] Front tires unload during acceleration, load during braking
+- [ ] Rear tires load during acceleration, unload during braking
+- [ ] Outside tires load during cornering
+- [ ] **CRITICAL:** Total load across all tires ≈ vehicle weight (when grounded and stationary)
+- [ ] **CRITICAL:** Tire load calculation does NOT add suspension spring force
+- [ ] Spring forces naturally converge to match tire loads at equilibrium
+
+### ✅ Edge Cases
+- [ ] Zero or negative tire loads are clamped to 0
+- [ ] Division by zero is prevented with validation checks
+- [ ] Airborne tires have zero load
+
+### ✅ Debug Validation
+Add this verification code temporarily:
+```cpp
+// Debug: Verify load conservation
+float TotalTireLoad = 0.0f;
+for (UTire* Tire : AllTires) {
+    TotalTireLoad += Tire->TireLoad;
+}
+float ExpectedLoad = VehicleMass * Gravity;
+float LoadError = FMath::Abs(TotalTireLoad - ExpectedLoad) / ExpectedLoad;
+
+if (GEngine && LoadError > 0.2f) { // More than 20% error
+    GEngine->AddOnScreenDebugMessage(100, 5.f, FColor::Red,
+        FString::Printf(TEXT("LOAD ERROR: %f%%  Total: %f  Expected: %f"),
+        LoadError * 100, TotalTireLoad, ExpectedLoad));
+}
+```
+
 ---
 
 *Document created: 2026-07-09*
+*Updated: 2026-07-10 (Fixed unit consistency, load distribution, edge case handling, and CRITICAL BUG: removed double-counting of suspension force in tire load calculation)*
 *Enhanced raycast approach for realistic vehicle suspension without full physics constraints*
 *Maintains simplicity while adding proper weight transfer physics*

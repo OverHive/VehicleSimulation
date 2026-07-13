@@ -24,6 +24,8 @@ public:
 	~UTire();
 	//Calculates the traction of the tire
 	float GetTraction(const float ThrottleForce) const;
+	//Calculates the braking for the tire
+	float GetWheelBrakingForce(const float brakingForce);
 	//Update the frictionCoefficient
 	void UpdateFrictionCoefficient(const float value) { FrictionCoefficient = value; }
 	//Change the radius of the tire
@@ -42,8 +44,14 @@ public:
 	void UpdateWheelSuspension(const FVector NewSpringForce, const  FVector NewHitLocation);
 	//Calculate the current tire load
 	void UpdateTireLoad(const float LongitudinalAcceleration, const float LateralAcceleration);
+	//Updates the rotational velocity of the wheel
+	void UpdateWheelRotationalVelocity(const float VehicleSpeed);
+	//Get the angle velocity of the wheel
+	float GetRotationalVelocity() { return WheelRotationalVelocity * (WheelRadius / 100.0f); };
+	//Apply deceleration to the wheel
+	void ApplyBrakes(const float BrakeTorque, const float DeltaTime);
 	//Calculate the rolling resistance
-	float GetRollingResistance();
+	float GetRollingResistance() const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	float SteerAngle = 0.0f;   // degrees, yaw relative to the chassis
@@ -72,6 +80,13 @@ private:
 	float DistanceOfCentreOfGravityToTireAxis = 0.5;
 	float WheelBase = 1;
 	float CentreOfGravityHeight = 1;
+	float WheelDamper = 0.98f;
+	float CouplingFactor = 0.1f;
+	float WheelRotationalVelocity = 0.0f;   
+	float WheelRotationalInertia = 0.5f;     
+	float WheelRadius = 30.0f;               
+	float LastBrakeTorque = 0.0f;          
+
 	
 	FVector NormalForce = FVector::ZeroVector;
 };
