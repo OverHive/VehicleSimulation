@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp Vehicle.cpp Vehicle.cpp.backup_fix)",
+      "Bash(sed -i '184,185d' Vehicle.cpp)",
+      "Bash(sed -i '183a\\\\\\\\t\\\\t\\\\t\\\\t\\\\t// Apply braking force in the opposite direction to the actual wheel velocity\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t// This ensures braking always opposes motion regardless of steering angle\\\\n\\\\t\\\\t\\\\t\\\\t\\\\tFVector BrakingForce = -WheelVelocity.GetSafeNormal\\(\\) * ActualBrakingForce;' Vehicle.cpp)"
+    ]
+  }
+}

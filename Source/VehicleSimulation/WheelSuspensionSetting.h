@@ -14,10 +14,7 @@ struct VEHICLESIMULATION_API FWheelSuspensionSetting
     GENERATED_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FVector AttachmentOffset = FVector::ZeroVector; // Local offset from vehicle centre
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    float SuspensionLength = 50.0f;
+    float SuspensionLength = 0.50f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float SpringStiffness = 14300.0f;
