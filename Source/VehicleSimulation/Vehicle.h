@@ -143,11 +143,22 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float HeaveDamping = 0.98f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
+	float AntiDivePercentage = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
+	float AntiSquatPercentage = 0.25f;    
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
+	float AntiDiveAngle = 20.0f;
 private:
 	//Models vehicle suspension using ray cast
 	void SuspensionRayCast();
 	// This function is called by the Enhanced Input System
 	void Move(const FInputActionValue& Value);
+	//Handles braking
+	void ApplyBraking(UTire * Tire, const float VehicleSpeedAtWheel, FVector WheelForward);
 	//Setup for the tires
 	void CreateTires();
 	//Handles the dynamics of the suspension
@@ -186,7 +197,9 @@ private:
 	float HeaveVelocity = 0.0f;
 	float FrontDynamicLoad = 0.0f;
 	float RearDynamicLoad = 0.0f;
+	float AntiDiveFactor = 1.0f;
 	bool Initialized = false;
+	bool IsBraking = false;
 	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
 
 };

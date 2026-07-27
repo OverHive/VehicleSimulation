@@ -84,7 +84,29 @@ void AVehicle::BeginPlay()
 		}
 	}
 }
+void AVehicle::ApplyBraking(UTire* Tire, const float VehicleSpeedAtWheel, FVector WheelForward)
+{
+	if (Tire->IsGrounded && FMath::Abs(VehicleSpeedAtWheel) > 1.0f)
+	{
+		//Calculate the tire slip ratio
 
+		float SlipRatio = Tire->CalculateSlipRatio(VehicleSpeedAtWheel);
+
+		// Calculate braking force from slip ratio 
+
+		// Limit Braking force  tire load and friction
+		float MaxBrakingForce = Tire->TireLoad * Tire->GetFrictionCoefficient();
+		float ActualBrakingForce = CurrentBrake * Tire->MagicFormula(MaxBrakingForce, SlipRatio);
+		//Apply the anti dive mechcanics
+		ActualBrakingForce *= AntiDivePercentage* FMath::Tan(FMath::DegreesToRadians(AntiDiveAngle));
+
+
+		// Apply braking force at contact point in the opposite  direction to the velocity
+		FVector BrakingForce = -WheelForward * ActualBrakingForce;
+
+		ApplyLocationForce(BrakingForce, Tire->GetContactPoint());
+	}
+}
 // Called every frame
 void AVehicle::Tick(float DeltaTime)
 {
@@ -149,6 +171,17 @@ void AVehicle::Tick(float DeltaTime)
 			GEngine->AddOnScreenDebugMessage(3, 3.f, FColor::Green, FString::Printf(TEXT("Weight %f N"), VehicleMass * Gravity));
 		}
 
+
+		if (CurrentBrake > 0.0f )
+		{
+			IsBraking = true;
+			AntiDiveFactor = (1.0f - AntiDivePercentage);
+		}
+		else
+		{
+			IsBraking = false;
+			AntiDiveFactor = 1.0f;
+		}
 		for (int i = 0; i < AllTires.Num(); i++)
 		{
 			UTire* Tire = AllTires[i];
@@ -167,26 +200,13 @@ void AVehicle::Tick(float DeltaTime)
 				//Get the wheel's velocity
 				FVector VelocityAtWheel = MeshComponent->GetPhysicsLinearVelocityAtPoint(SocketLocation);
 
-				//Apply braking
+				//Handle braking
 				float VehicleSpeedAtWheel = FVector::DotProduct(VelocityAtWheel, WheelForward);
-				if (CurrentBrake > 0.0f && Tire->IsGrounded && FMath::Abs(VehicleSpeedAtWheel) > 1.0f)
+				if (IsBraking)
 				{
-					//Calculate the tire slip ratio
-
-					float SlipRatio = Tire->CalculateSlipRatio(VehicleSpeedAtWheel);
-
-					// Calculate braking force from slip ratio 
-
-					// Limit Braking force  tire load and friction
-					float MaxBrakingForce = Tire->TireLoad * Tire->GetFrictionCoefficient();
-					float ActualBrakingForce = CurrentBrake * Tire->MagicFormula(MaxBrakingForce, SlipRatio);
-
-					// Apply braking force at contact point in the opposite  direction to the velocity
-					FVector BrakingForce = -WheelForward * ActualBrakingForce;
-
-					ApplyLocationForce(BrakingForce, Tire->GetContactPoint());
-
+					ApplyBraking(Tire,VehicleSpeedAtWheel,WheelForward);
 				}
+
 
 				//Calculate the lateral and longitudinal speed
 				float ForwardSpeed = FVector::DotProduct(VelocityAtWheel, WheelForward);
@@ -414,6 +434,8 @@ void AVehicle::CalculatePitchWeightTransfer(const float LongitudinalAcceleration
 	// Dynamic weight transfer due to longitudinal acceleration
 	// Weight transfer = (Mass × Acceleration × CG Height) / Wheelbase
 	float LongitudinalWeightTransfer = (VehicleMass * LongitudinalAcceleration * CentreOfGravityHeight) / WheelBaseLength;
+	// Multiple weight transfer by anti dive
+	LongitudinalWeightTransfer *= AntiDiveFactor;
 	float LateralForceOnVehicle = LateralAcceleration * VehicleMass;
 	float LateralChangeInTireLoad = TrackWidth > 0 ? LateralForceOnVehicle * (CentreOfGravityHeight / TrackWidth) : 0;
 	// During acceleration (positive), weight transfers to rear
@@ -468,6 +490,8 @@ void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  Longitudin
 	float PitchMoment = (RearSuspensionForce * DistanceOfCentreOfGravityToRearAxis) - (FrontSuspensionForce * DistanceOfCentreOfGravityToFrontAxis);
 
 	float WeightTransferMoment = VehicleMass * LongitudinalAcceleration * CentreOfGravityHeight;
+	//Apply anti dive factor
+	WeightTransferMoment *= AntiDiveFactor;
 	PitchMoment += WeightTransferMoment;
 
 	//Get the pitch acceleration from the moment
