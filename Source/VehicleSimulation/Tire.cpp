@@ -42,33 +42,29 @@ void UTire::UpdateTireLoad(float NewWeight)
 	UpdateMaxTraction();
 }
 
-float UTire::CalculateWheelRotationalVelocity(const float VehicleSpeed)
+void UTire::UpdateWheelRotationalVelocity(const float VehicleSpeed)
 {
 	//If the tire is in the air enter free rotation
 	if (!IsGrounded)
 	{
 		WheelRotationalVelocity *= WheelDamper;
-		return 0;
+		return;
 	}
 	//Calculate the rotational velocity of the wheel
-	float TargetRotationalVelocity = VehicleSpeed / (SuspensionSettings.WheelRadius / 100.0f);
-	//
+	float TargetRotationalVelocity = VehicleSpeed * (SuspensionSettings.WheelRadius);
+	//Intro
 	WheelRotationalVelocity = FMath::Lerp(WheelRotationalVelocity, TargetRotationalVelocity, CouplingFactor);
-	return WheelRotationalVelocity;
 }
 
-float UTire::CalculateSlipRatio(const float VehicleSpeedAtWheel)
+void UTire::UpdateSlipRatio(const float VehicleSpeedAtWheel)
 {
 	float WheelSurfaceSpeed = GetRotationalVelocity();
-	SlipRatio = FMath::Abs(VehicleSpeedAtWheel) > 0.1f ?(WheelSurfaceSpeed - VehicleSpeedAtWheel) / FMath::Max(FMath::Abs(VehicleSpeedAtWheel), FMath::Abs(WheelSurfaceSpeed))
-		: 0;
-	return SlipRatio;
+	SlipRatio = FMath::Abs(VehicleSpeedAtWheel) > 0.1f ?(WheelSurfaceSpeed - VehicleSpeedAtWheel) /FMath::Abs(VehicleSpeedAtWheel): 0;
 }
 
-float UTire::CalculateSlipAngle(const float VelocityY, const float VelocityX)
+void UTire::UpdateSlipAngle(const float VelocityY, const float VelocityX)
 {
 	SlipAngle = VelocityX != 0 ? FMath::Atan2(VelocityY , VelocityX) : 0;
-	return SlipAngle;
 }
 
 void UTire::ApplyBrakes(const float AppliedBrakeTorque, const float DeltaTime)
@@ -116,7 +112,7 @@ float UTire::MagicFormula(const float peakValue, const float x) const
 	float StiffnessEffect = StiffnessFactor * x;
 	float CurvatureEffect = CurvatureFactor * (StiffnessEffect - FMath::Atan(StiffnessEffect));
 	float arc = FMath::Atan(StiffnessEffect - CurvatureEffect);
-	return peakValue *sin(ShapeFactor*FMath::Atan(StiffnessEffect-CurvatureEffect));
+	return peakValue *sin(ShapeFactor*arc);
 }
 
 void UTire::UpdateVehicleParameters(const float mass, const float wheelBaseLength, const float trackWidth, const float DistanceOfCGToFrontAxis,

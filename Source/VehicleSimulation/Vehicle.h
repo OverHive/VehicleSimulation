@@ -55,11 +55,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float VehicleMass = 150.0f; // kg
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float ThrottleForce = 15000.0f;//N
+	float ThrottleForce = 1500000.0f;//cN
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float MaxBrakeTorque = 500.0f;//N/cm
-	float BrakeForce = 10000.0f;//N
+	float MaxBrakeTorque = 50000.0f;//N/cm
+	float BrakeForce = 1000000.0f;//cN
 	//For calculating drag
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float Width = 210.0f;//cm
@@ -84,6 +84,9 @@ public:
 	float TrackWidth = 140.0f;//cm/s
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float OptimalBrakingSlip = 0.18f;
+	//The threshold for activating the magic formula
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float FormulaThreshold = 5.0f; //Km/h
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float MaxSteeringAngle = 35.0f;      // degrees at full lock
@@ -169,8 +172,12 @@ private:
 	void CalculatePitchWeightTransfer(const float LongitudionalAcceleration, const float LateralAcceleration);
 	// Calculate pitch dynamics
 	void CalculatePitchAndHeaveDynamics(float DeltaTime,float LongitudinalAcceleration);
+	//Updates the state of a wheel
+	void UpdateWheel(UTire* Tire);
 	//Applies suspension forces to the vehicle
 	void ApplySuspensionForceEffects();
+	//Apply a force through a wheel
+	void ApplyWheelForce (UTire* Tire, float ForceMagnitude, FVector Direction);
 	//Applies a force at location
 	void ApplyLocationForce(FVector Force,FVector Position);
 
@@ -198,7 +205,7 @@ private:
 	float FrontDynamicLoad = 0.0f;
 	float RearDynamicLoad = 0.0f;
 	float AntiDiveFactor = 1.0f;
-	bool Initialized = false;
+	bool Initialized = true;
 	bool IsBraking = false;
 	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
 

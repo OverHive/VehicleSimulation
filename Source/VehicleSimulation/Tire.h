@@ -9,7 +9,7 @@
 #include "Engine/World.h"
 #include "WheelSuspensionSetting.h"
 #include "Tire.generated.h"
-enum TIREINDEX{ REARLEFT = 0, REARRIGHT = 1, FRONTLEFT = 2, FRONTRIGHT = 3 };
+enum TIREINDEX { REARLEFT = 0, REARRIGHT = 1, FRONTLEFT = 2, FRONTRIGHT = 3 };
 /**
  *
  */
@@ -27,9 +27,9 @@ public:
 	//Calculates the braking for the tire
 	float GetWheelBrakingForce(const float brakingForce) const;
 	//Returns the angle velocity of the wheel
-	float GetRotationalVelocity() { return WheelRotationalVelocity * (SuspensionSettings.WheelRadius ); };
+	float GetRotationalVelocity() { return WheelRotationalVelocity; };
 	//Returns the float slip ratio
-	float GetSlipRatios() const { return SlipRatio; };
+	float GetSlipRatio() const { return SlipRatio; };
 	//Calculate the rolling resistance
 	float GetRollingResistance() const;
 	//Get the compression of the wheel
@@ -37,10 +37,17 @@ public:
 	//Gets the overall suspension force on the tire
 	float CalculateSuspensionForce(const float SuspensionVelocity);
 	//Gets the current suspension force
-	float GetSuspensionForce() { return SuspensionForce; }
-	
+	float GetSuspensionForce() { return IsGrounded ? SuspensionForce : 0; }
+	//Get the wheel's tire load
+	float GetTireLoad() const { return TireLoad; };
+	//Updates the rotational velocity of the wheel
+	void UpdateWheelRotationalVelocity(const float VehicleSpeed);
+	//Gets the friction coefficient 
+	float GetFrictionCoefficient() const { return FrictionCoefficient; }
 	//Model the force using slip
 	float MagicFormula(const float value, const float x) const;
+	//Returns the tire's slip angle
+	float GetSlipAngle() const { return SlipAngle; };
 	//Gets the lateral grip of the tire
 	const float GetLateralGrip();
 	//Update the frictionCoefficient
@@ -53,29 +60,22 @@ public:
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
 	//Update the vehicle fields the wheel has	
-	void UpdateVehicleParameters(const float mass, const float wheelBaseLength, const float trackWidth, const float DistanceOfCGToFrontAxis, const float DistanceOfCGToRearAxis, const float CGHeight,const float NewGravity);
+	void UpdateVehicleParameters(const float mass, const float wheelBaseLength, const float trackWidth, const float DistanceOfCGToFrontAxis, const float DistanceOfCGToRearAxis, const float CGHeight, const float NewGravity);
 	//Store the contact location of the tire
 	void StoreTireContactLocation(const  FVector NewHitLocation);
 	//Update the suspension setting of the wheels
 	void UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength = 0.50f);
 	//Apply deceleration to the wheel
 	void ApplyBrakes(const float BrakeTorque, const float DeltaTime);
-	//Gets the wheel's contact point
-	FVector GetContactPoint() {return ContactPoint;}
+	//Updates the tire's slip ratio
+	void UpdateSlipRatio(const float wheelSpeed);
 	//Updates the current tire load
 	void UpdateTireLoad(float NormalForce);
-	//Get the wheel's tire load
-	float GetTireLoad() const { return TireLoad; };
-	//Updates the rotational velocity of the wheel
-	float CalculateWheelRotationalVelocity(const float VehicleSpeed);
-	//Updates the tire's slip ratio
-	float CalculateSlipRatio(const float wheelSpeed);
 	//Updates the tire's angle ratio
-	float CalculateSlipAngle(const float velocityY, const float velocityX);
-	//Gets the friction coefficient 
-	float GetFrictionCoefficient() const { return FrictionCoefficient; }
+	void UpdateSlipAngle(const float velocityY, const float velocityX);
 
-
+	//Gets the wheel's contact point
+	FVector GetContactPoint() { return ContactPoint; }
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	float SteerAngle = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")

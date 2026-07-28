@@ -14,7 +14,7 @@ struct VEHICLESIMULATION_API FWheelSuspensionSetting
     GENERATED_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    float SuspensionLength = 0.50f;
+    float SuspensionLength = 50.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float SpringStiffness = 14300.0f;
