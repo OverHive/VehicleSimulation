@@ -24,8 +24,6 @@ public:
 	~UTire();
 	//Calculates the traction of the tire
 	float GetTraction(const float ThrottleForce) const;
-	//Calculates the braking for the tire
-	float GetWheelBrakingForce(const float brakingForce) const;
 	//Returns the angle velocity of the wheel
 	float GetRotationalVelocity() { return WheelRotationalVelocity; };
 	//Returns the float slip ratio
@@ -53,20 +51,16 @@ public:
 	//Update the frictionCoefficient
 	void UpdateFrictionCoefficient(const float value) { FrictionCoefficient = value; }
 	//Change the radius of the tire
-	void UpdateTireRadius(const float value) { TireRadius = value; }
+	void UpdateTireRadius(const float value) { SuspensionSettings.WheelRadius = value; }
 	//Calculates the maximum load the tire can bear
 	void UpdateMaxTraction();
 
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
-	//Update the vehicle fields the wheel has	
-	void UpdateVehicleParameters(const float mass, const float wheelBaseLength, const float trackWidth, const float DistanceOfCGToFrontAxis, const float DistanceOfCGToRearAxis, const float CGHeight, const float NewGravity);
 	//Store the contact location of the tire
 	void StoreTireContactLocation(const  FVector NewHitLocation);
 	//Update the suspension setting of the wheels
-	void UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength = 0.50f);
-	//Apply deceleration to the wheel
-	void ApplyBrakes(const float BrakeTorque, const float DeltaTime);
+	void UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness);
 	//Updates the tire's slip ratio
 	void UpdateSlipRatio(const float wheelSpeed);
 	//Updates the current tire load
@@ -103,20 +97,12 @@ public:
 	bool IsGrounded = false;
 private:
 
-	float Gravity = 0;
-	float VehicleMass = 300;
-	float BaseTireLoad = 0;
-	float VehicleWeight = 300000;
+
 	float FrictionCoefficient = 1.4;
-	float TireRadius = 1;
-	float TrackWidth = 0;
 	float SlipRatio = 0.0;
 	float SlipAngle = 0.0;
 
 	float MaximumWheelTraction = 0.5;
-	float DistanceOfCentreOfGravityToTireAxis = 0.5;
-	float WheelBase = 1;
-	float CentreOfGravityHeight = 1;
 	float WheelDamper = 0.98f;
 	float CouplingFactor = 0.1f;
 	float WheelRotationalVelocity = 0.0f;
@@ -124,5 +110,6 @@ private:
 	float LastBrakeTorque = 0.0f;
 	float SuspensionForce = 0;
 
+	float TireCompression = 0.0f;
 	float SuspensionCompression = 0.0f;
 };

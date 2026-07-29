@@ -58,7 +58,6 @@ public:
 	float ThrottleForce = 1500000.0f;//cN
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float MaxBrakeTorque = 50000.0f;//N/cm
 	float BrakeForce = 1000000.0f;//cN
 	//For calculating drag
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
@@ -82,8 +81,6 @@ public:
 	float FinalGearRatio = 5.6;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float TrackWidth = 140.0f;//cm/s
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float OptimalBrakingSlip = 0.18f;
 	//The threshold for activating the magic formula
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float FormulaThreshold = 5.0f; //Km/h
@@ -142,6 +139,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float SuspensionRestLength = 50.0f;//cm
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
+	float UnSprungDamping = 0.95f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float PitchDamping = 0.95f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
@@ -155,6 +155,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float AntiDiveAngle = 20.0f;
+	UPROPERTY(EditAnywhere, Category = "Suspension")
+	float TireVerticalStiffness = 20000000.0f;  // N/cm
 private:
 	//Models vehicle suspension using ray cast
 	void SuspensionRayCast();
@@ -170,7 +172,9 @@ private:
 	void CalculateResistiveForce(FVector Velocity);
 	//Calculates pitch weight transfer effects
 	void CalculatePitchWeightTransfer(const float LongitudionalAcceleration, const float LateralAcceleration);
-	// Calculate pitch dynamics
+	//Handles unsprung mass dynamics
+	void CalculateUnsprungMassDynamics(float DeltaTime);
+	// Handles pitch dynamics
 	void CalculatePitchAndHeaveDynamics(float DeltaTime,float LongitudinalAcceleration);
 	//Updates the state of a wheel
 	void UpdateWheel(UTire* Tire);
@@ -184,7 +188,7 @@ private:
 	//Note: Forces must be in  cm/s²
 	float FrontSuspensionForce = 0.0f;
 	float RearSuspensionForce = 0.0f;
-	float Gravity = 981;
+	float Gravity = 981.0f;
 	// Stores the input from the joystick/WASD
 	FVector2D CurrentInputDirection;
 	void Input_Throttle(const FInputActionValue& Value);
@@ -198,6 +202,13 @@ private:
 	float CurrentBrake = 0.0f;
 	float CurrentSteeringAngle = 0.0f;
 
+	float FrontUnsprungPosition = 0.0f;
+	float FrontUnsprungVelocity = 0.0f;
+	float RearUnsprungPosition = 0.0f;
+	float RearUnsprungVelocity = 0.0f;
+	float FrontUnsprungForce = 0.0f;
+	float RearUnsprungForce = 0.0f;
+
 	float PitchAngle = 0.0f;
 	float PitchVelocity = 0.0f;
 	float HeavePosition = 0.0f;
@@ -205,7 +216,6 @@ private:
 	float FrontDynamicLoad = 0.0f;
 	float RearDynamicLoad = 0.0f;
 	float AntiDiveFactor = 1.0f;
-	bool Initialized = true;
 	bool IsBraking = false;
 	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
 

@@ -25,5 +25,8 @@ struct VEHICLESIMULATION_API FWheelSuspensionSetting
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float WheelRadius = 20.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float TireVerticalStiffness = 20000000.0f;
+
 
 };

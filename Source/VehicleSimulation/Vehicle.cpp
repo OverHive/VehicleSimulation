@@ -97,9 +97,6 @@ void AVehicle::ApplyBraking(UTire* Tire, const float VehicleSpeedAtWheel, FVecto
 		// Limit Braking force  tire load and friction
 		float TireGrip = Tire->TireLoad * Tire->GetFrictionCoefficient();
 		float MaxBrakingForce =  FMath::Abs(Tire->MagicFormula(TireGrip, SlipRatio));
-		//Apply the anti dive mechanics
-		MaxBrakingForce *= AntiDivePercentage* FMath::Tan(FMath::DegreesToRadians(AntiDiveAngle));
-
 		//Calculate the total force required to the stop the vehicle
 		float ForceToStop = FMath::Abs(DeltaTime != 0 ? (VehicleMass * VehicleSpeedAtWheel) / DeltaTime : 0);
 		// Apply braking force at contact point in the opposite  direction to the velocity
@@ -341,13 +338,11 @@ void AVehicle::CreateTires()
 				FName(socketNames[i])
 			);
 			AllTires[i]->UpdateFrictionCoefficient(1.0);
-			AllTires[i]->UpdateVehicleParameters(VehicleMass, WheelBaseLength, TrackWidth, DistanceOfCentreOfGravityToFrontAxis,
-				DistanceOfCentreOfGravityToRearAxis, CentreOfGravityHeight, Gravity);
-			//
+			//Setup the suspension
 			const bool IsFrontTire = AllTires[i]->IsFrontTire;
 			AllTires[i]->UpdateSuspension(IsFrontTire ? FrontSuspensionStiffness : RearSuspensionStiffness,
 				IsFrontTire ? FrontSuspensionDamping : RearSuspensionDamping,
-				SuspensionRestLength);
+				SuspensionRestLength, TireVerticalStiffness);
 			//Store the socket name with wheel
 			AllTires[i]->SocketName = socketNames[i];
 		}
@@ -360,6 +355,8 @@ void AVehicle::CalculateSuspensionDynamics(float DeltaTime, float LongitudinalAc
 		CalculatePitchWeightTransfer(LongitudinalAcceleration, LateralAcceleration);
 		//Update the suspension compression using ray casts
 		SuspensionRayCast();
+		//Update unsprung masses
+		CalculateUnsprungMassDynamics(DeltaTime);
 		//Update pitch and heave
 		CalculatePitchAndHeaveDynamics(DeltaTime, LongitudinalAcceleration);
 		//Apply Force to the Physics Body to create torque/rotation naturally
@@ -442,30 +439,56 @@ void AVehicle::CalculatePitchWeightTransfer(const float LongitudinalAcceleration
 	}
 }
 
-void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  LongitudinalAcceleration)
+void AVehicle::CalculateUnsprungMassDynamics(float DeltaTime)
 {
-	FrontSuspensionForce = 0.0f;
-	RearSuspensionForce = 0.0f;
-	//Obtain the suspension forces from the wheels
+	//Reset the unspring forces
+	FrontUnsprungForce = 0.0f;
+	RearUnsprungForce = 0.0f;
+
 	for (UTire*& Tire : AllTires)
 	{
 		if (Tire->IsGrounded)
 		{
-			//Handles grouping front spring forces
+			//Select a unsprung mass based on tire position 
+			float UnsprungMass = Tire->IsFrontTire ? FrontUnsprungMass : RearUnsprungMass;
+
+			// Get suspension force
+			float SuspensionForce = Tire->GetSuspensionForce();
+
+			// Net force on unsprung mass = Tire force (tire load) - Suspension force
+			float NetUnsprungForce = Tire->TireLoad - SuspensionForce;
+
+			// Update unsprung mass dynamics
+			float UnsprungAcceleration = UnsprungMass  != 0?NetUnsprungForce / UnsprungMass:0;
+			//Obtain the suspension forces from the wheels and update the unsprung mass positions
 			if (Tire->IsFrontTire)
 			{
-				FrontSuspensionForce += Tire->GetSuspensionForce();
+				FrontUnsprungVelocity += UnsprungAcceleration * DeltaTime;
+				FrontUnsprungPosition += FrontUnsprungVelocity * DeltaTime;
+				FrontUnsprungForce += SuspensionForce; // Store for sprung mass calculation
 			}
-			//Handles grouping rear spring forces
 			else
 			{
-				RearSuspensionForce += Tire->GetSuspensionForce();
+				RearUnsprungVelocity += UnsprungAcceleration * DeltaTime;
+				RearUnsprungPosition += RearUnsprungVelocity * DeltaTime;
+				RearUnsprungForce += SuspensionForce;
 			}
+
+			// Add damping to unsprung mass
+			if (Tire->IsFrontTire)
+				FrontUnsprungVelocity *= UnSprungDamping;
+			else
+				RearUnsprungVelocity *= UnSprungDamping;
 		}
 	}
+}
+
+void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  LongitudinalAcceleration)
+{
+
 
 	//Use the suspension forces to obtain the pitch moment
-	float PitchMoment = (RearSuspensionForce * DistanceOfCentreOfGravityToRearAxis) - (FrontSuspensionForce * DistanceOfCentreOfGravityToFrontAxis);
+	float PitchMoment = (RearUnsprungForce * DistanceOfCentreOfGravityToRearAxis) - (FrontUnsprungForce * DistanceOfCentreOfGravityToFrontAxis);
 
 	float WeightTransferMoment = VehicleMass * LongitudinalAcceleration * CentreOfGravityHeight;
 	//Apply anti dive factor
@@ -485,7 +508,7 @@ void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  Longitudin
 	PitchAngle = FMath::Clamp(PitchAngle, FMath::DegreesToRadians(-15.0f), FMath::DegreesToRadians(15.0f));
 
 	//Get the overall vertical force on the 
-	float TotalSuspensionForce = FrontSuspensionForce + RearSuspensionForce;
+	float TotalSuspensionForce = FrontUnsprungForce + RearUnsprungForce;
 	float VehicleWeight = VehicleMass * Gravity;
 	float NetVerticalForce = TotalSuspensionForce - VehicleMass * Gravity;
 	//Calculate the heave acceleration with acceleration = force/mass
@@ -495,7 +518,6 @@ void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  Longitudin
 	HeavePosition += HeaveVelocity * DeltaTime;
 
 	// Add heave damping
-	HeaveDamping = 0.98f;
 	HeaveVelocity *= HeaveDamping;
 
 	// Clamp to realistic limits
