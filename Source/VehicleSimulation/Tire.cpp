@@ -59,7 +59,7 @@ void UTire::UpdateWheelRotationalVelocity(const float VehicleSpeed)
 void UTire::UpdateSlipRatio(const float VehicleSpeedAtWheel)
 {
 	float WheelSurfaceSpeed = GetRotationalVelocity();
-	SlipRatio = FMath::Abs(VehicleSpeedAtWheel) > 0.1f ?(WheelSurfaceSpeed - VehicleSpeedAtWheel) /FMath::Abs(VehicleSpeedAtWheel): 0;
+	SlipRatio = FMath::Abs(VehicleSpeedAtWheel) > 0.1f ?(WheelSurfaceSpeed - VehicleSpeedAtWheel) /VehicleSpeedAtWheel: 0;
 }
 
 void UTire::UpdateSlipAngle(const float VelocityY, const float VelocityX)

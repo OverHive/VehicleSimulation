@@ -84,7 +84,7 @@ void AVehicle::BeginPlay()
 		}
 	}
 }
-void AVehicle::ApplyBraking(UTire* Tire, const float VehicleSpeedAtWheel, FVector WheelForward)
+void AVehicle::ApplyBraking(UTire* Tire, const float VehicleSpeedAtWheel, FVector WheelForward, float DeltaTime)
 {
 	if (Tire->IsGrounded && FMath::Abs(VehicleSpeedAtWheel) > 1.0f)
 	{
@@ -95,15 +95,15 @@ void AVehicle::ApplyBraking(UTire* Tire, const float VehicleSpeedAtWheel, FVecto
 		// Calculate braking force from slip ratio 
 
 		// Limit Braking force  tire load and friction
-		float MaxBrakingForce = Tire->TireLoad * Tire->GetFrictionCoefficient();
-		float ActualBrakingForce = CurrentBrake * Tire->MagicFormula(MaxBrakingForce, SlipRatio);
+		float TireGrip = Tire->TireLoad * Tire->GetFrictionCoefficient();
+		float MaxBrakingForce =  FMath::Abs(Tire->MagicFormula(TireGrip, SlipRatio));
 		//Apply the anti dive mechanics
-		ActualBrakingForce *= AntiDivePercentage* FMath::Tan(FMath::DegreesToRadians(AntiDiveAngle));
+		MaxBrakingForce *= AntiDivePercentage* FMath::Tan(FMath::DegreesToRadians(AntiDiveAngle));
 
-
+		//Calculate the total force required to the stop the vehicle
+		float ForceToStop = FMath::Abs(DeltaTime != 0 ? (VehicleMass * VehicleSpeedAtWheel) / DeltaTime : 0);
 		// Apply braking force at contact point in the opposite  direction to the velocity
-		FVector BrakingForce = -WheelForward * ActualBrakingForce;
-
+		FVector BrakingForce = -CurrentVelocity.GetSafeNormal() * CurrentBrake * FMath::Min(ForceToStop,MaxBrakingForce);
 		ApplyLocationForce(BrakingForce, Tire->GetContactPoint());
 	}
 }
@@ -122,7 +122,7 @@ void AVehicle::Tick(float DeltaTime)
 		FVector RightVector = GetActorRightVector();
 		float LateralVelocity = FVector::DotProduct(LinearVelocity, RightVector);
 
-		// Progressive damping: more damping at higher speeds, less at low speeds
+		// Progressive damping
 		float SpeedFactor = FMath::Clamp(FMath::Abs(LinearVelocity.Size()) / 1000.0f, 0.1f, 1.0f);
 
 		// Base damping on vehicle mass and speed
@@ -190,14 +190,14 @@ void AVehicle::Tick(float DeltaTime)
 				//Apply traction through the front tires
 				if (Tire->IsFrontTire)
 				{
-					float TireTraction = ForwardVelocity > FormulaThreshold? Tire->MagicFormula(Tire->GetTraction(CurrentThrottle * ThrottleForce), Tire->GetSlipRatio()) : Tire->GetTraction(CurrentThrottle * ThrottleForce);
+					float TireTraction = FMath::Abs(ForwardVelocity) > FormulaThreshold? Tire->MagicFormula(Tire->GetTraction(CurrentThrottle * ThrottleForce), Tire->GetSlipRatio()) : Tire->GetTraction(CurrentThrottle * ThrottleForce);
 					ApplyWheelForce(Tire, TireTraction, WheelForward);
 				}
 
 				//Handle braking
 				if (IsBraking)
 				{
-					ApplyBraking(Tire,SpeedAtWheel,WheelForward);
+					ApplyBraking(Tire,SpeedAtWheel,WheelForward,DeltaTime);
 				}
 	
 				//Calculate the lateral friction force
@@ -522,10 +522,6 @@ void AVehicle::UpdateWheel(UTire* Tire)
 	//Update the slip angle and ratio 
 	Tire->UpdateSlipAngle(ForwardSpeed, LateralSpeed);
 	Tire->UpdateSlipRatio(SpeedAtWheel);
-	if (Tire->IsFrontTire)
-	{
-		GEngine->AddOnScreenDebugMessage(10 + Tire->TirePosition-2, 3.f, FColor::Green, FString::Printf(TEXT("%s's tire load :%f N"), *Tire->GetName(), Tire->GetSlipRatio()));
-	}
 }
 
 void AVehicle::ApplySuspensionForceEffects()
@@ -549,7 +545,7 @@ void AVehicle::ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direct
 
 		// Calculate the counteracting torque needed
 		float ThrottleMoment = ForceMagnitude * FrontMomentArm;
-		// Apply counter-torque (negative pitch torque to resist nose-up)
+		// Apply counter-torque
 		FVector PitchCounterTorque = GetActorRightVector() * (ThrottleMoment);
 		MeshComponent->AddTorqueInRadians(PitchCounterTorque);
 	}

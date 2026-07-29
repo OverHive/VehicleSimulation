@@ -161,7 +161,7 @@ private:
 	// This function is called by the Enhanced Input System
 	void Move(const FInputActionValue& Value);
 	//Handles braking
-	void ApplyBraking(UTire * Tire, const float VehicleSpeedAtWheel, FVector WheelForward);
+	void ApplyBraking(UTire * Tire, const float VehicleSpeedAtWheel, FVector WheelForward, float DeltaTime);
 	//Setup for the tires
 	void CreateTires();
 	//Handles the dynamics of the suspension
