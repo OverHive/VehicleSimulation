@@ -24,7 +24,6 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -153,6 +152,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float AntiSquatPercentage = 0.25f;    
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
+	float AntiSquatAngle = 20.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float AntiDiveAngle = 20.0f;
 	UPROPERTY(EditAnywhere, Category = "Suspension")
@@ -163,7 +166,7 @@ private:
 	// This function is called by the Enhanced Input System
 	void Move(const FInputActionValue& Value);
 	//Handles braking
-	void ApplyBraking(UTire * Tire, const float VehicleSpeedAtWheel, FVector WheelForward, float DeltaTime);
+	void ApplyBraking(UTire * Tire, const float VehicleSpeedAtWheel,float DeltaTime);
 	//Setup for the tires
 	void CreateTires();
 	//Handles the dynamics of the suspension
@@ -172,6 +175,8 @@ private:
 	void CalculateResistiveForce(FVector Velocity);
 	//Calculates pitch weight transfer effects
 	void CalculatePitchWeightTransfer(const float LongitudionalAcceleration, const float LateralAcceleration);
+	//Handles anti-dive and anti-squat moment
+	void CalculateCorrectionMoments(float DeltaTime);
 	//Handles unsprung mass dynamics
 	void CalculateUnsprungMassDynamics(float DeltaTime);
 	// Handles pitch dynamics
@@ -181,9 +186,13 @@ private:
 	//Applies suspension forces to the vehicle
 	void ApplySuspensionForceEffects();
 	//Apply a force through a wheel
-	void ApplyWheelForce (UTire* Tire, float ForceMagnitude, FVector Direction);
+	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction, bool IsForward = true);
 	//Applies a force at location
 	void ApplyLocationForce(FVector Force,FVector Position);
+	//Gets the traction force on for a wheel
+	float GetTireTraction(UTire *Tire);
+	//Gets the braking force for a wheel
+	float GetTireBrakingForce(UTire* Tire, float DeltaTime);
 
 	//Note: Forces must be in  cm/s²
 	float FrontSuspensionForce = 0.0f;
@@ -202,6 +211,8 @@ private:
 	float CurrentBrake = 0.0f;
 	float CurrentSteeringAngle = 0.0f;
 
+	float AntiDiveMoment = 0;
+	float AntiSquatMoment = 0;
 	float FrontUnsprungPosition = 0.0f;
 	float FrontUnsprungVelocity = 0.0f;
 	float RearUnsprungPosition = 0.0f;

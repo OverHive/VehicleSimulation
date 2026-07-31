@@ -84,24 +84,15 @@ void AVehicle::BeginPlay()
 		}
 	}
 }
-void AVehicle::ApplyBraking(UTire* Tire, const float VehicleSpeedAtWheel, FVector WheelForward, float DeltaTime)
+void AVehicle::ApplyBraking(UTire* Tire, const float VehicleSpeedAtWheel,float DeltaTime)
 {
-	if (Tire->IsGrounded && FMath::Abs(VehicleSpeedAtWheel) > 1.0f)
+	if (Tire->IsGrounded && FMath::Abs(VehicleSpeedAtWheel) > 20.0f)
 	{
-		//Calculate the tire slip ratio
-
-		float SlipRatio = Tire->GetSlipRatio();
-
-		// Calculate braking force from slip ratio 
-
-		// Limit Braking force  tire load and friction
-		float TireGrip = Tire->TireLoad * Tire->GetFrictionCoefficient();
-		float MaxBrakingForce =  FMath::Abs(Tire->MagicFormula(TireGrip, SlipRatio));
-		//Calculate the total force required to the stop the vehicle
-		float ForceToStop = FMath::Abs(DeltaTime != 0 ? (VehicleMass * VehicleSpeedAtWheel) / DeltaTime : 0);
 		// Apply braking force at contact point in the opposite  direction to the velocity
-		FVector BrakingForce = -CurrentVelocity.GetSafeNormal() * CurrentBrake * FMath::Min(ForceToStop,MaxBrakingForce);
-		ApplyLocationForce(BrakingForce, Tire->GetContactPoint());
+
+		float BrakingForce = GetTireBrakingForce(Tire, DeltaTime);
+
+		ApplyWheelForce(Tire, BrakingForce,  -CurrentVelocity.GetSafeNormal(), FVector::DotProduct(CurrentVelocity, MeshComponent->GetForwardVector())<1);
 	}
 }
 // Called every frame
@@ -157,10 +148,10 @@ void AVehicle::Tick(float DeltaTime)
 		//Update the HUD parameters
 
 		//Display the settings
-		float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity,MeshComponent->GetForwardVector() * 0.036));
+		float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, MeshComponent->GetForwardVector() * 0.036));
 		if (GEngine)
 		{
-			float ForwardAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, MeshComponent->GetForwardVector()*0.01));
+			float ForwardAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, MeshComponent->GetForwardVector() * 0.01));
 			GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Green, FString::Printf(TEXT("Speed %f km/h"), ForwardVelocity));
 			GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Green, FString::Printf(TEXT("Acceleration %f m/s^2"), ForwardAcceleration));
 			GEngine->AddOnScreenDebugMessage(3, 3.f, FColor::Green, FString::Printf(TEXT("Weight %f N"), VehicleMass * Gravity));
@@ -169,9 +160,6 @@ void AVehicle::Tick(float DeltaTime)
 		//Toggle brakes base on the current braking input 
 		IsBraking = CurrentBrake > 0.0f;
 
-		//Toggle anti dive/squat mechanics based on braking state
-		AntiDiveFactor = 1.0f - (IsBraking?AntiDivePercentage:AntiSquatPercentage);
-	
 		for (int i = 0; i < AllTires.Num(); i++)
 		{
 			UTire* Tire = AllTires[i];
@@ -183,23 +171,23 @@ void AVehicle::Tick(float DeltaTime)
 				UpdateWheel(Tire);
 				FVector VelocityAtWheel = MeshComponent->GetPhysicsLinearVelocityAtPoint(SkeletalMesh->GetSocketLocation(Tire->SocketName));
 				float SpeedAtWheel = FVector::DotProduct(VelocityAtWheel, WheelForward);
-				
+
 				//Apply traction through the front tires
 				if (Tire->IsFrontTire)
 				{
-					float TireTraction = FMath::Abs(ForwardVelocity) > FormulaThreshold? Tire->MagicFormula(Tire->GetTraction(CurrentThrottle * ThrottleForce), Tire->GetSlipRatio()) : Tire->GetTraction(CurrentThrottle * ThrottleForce);
+					float TireTraction = GetTireTraction(Tire);
 					ApplyWheelForce(Tire, TireTraction, WheelForward);
 				}
 
 				//Handle braking
 				if (IsBraking)
 				{
-					ApplyBraking(Tire,SpeedAtWheel,WheelForward,DeltaTime);
+					ApplyBraking(Tire, SpeedAtWheel, DeltaTime);
 				}
-	
+
 				//Calculate the lateral friction force
 				float MaxGrip = Tire->GetLateralGrip();
-				float DesiredForce = -Tire->MagicFormula(Tire->GetSlipAngle(),  MaxGrip);
+				float DesiredForce = -Tire->MagicFormula(Tire->GetSlipAngle(), MaxGrip);
 				FVector WheelRight = FVector::CrossProduct(MeshComponent->GetUpVector(), WheelForward);
 				FVector LateralFriction = WheelRight * FMath::Clamp(DesiredForce, -MaxGrip, MaxGrip);
 
@@ -229,7 +217,7 @@ void AVehicle::SuspensionRayCast()
 		//Get the Wheel and its corresponding ray
 		const FWheelSuspensionSetting& Wheel = Tire->SuspensionSettings;
 		FVector StartLocation = SkeletalMesh->GetSocketLocation(Tire->SocketName);
-			
+
 		FVector EndLocation = StartLocation + (RayDirection * (Wheel.SuspensionLength + Wheel.WheelRadius));
 
 		FHitResult Hit;
@@ -351,16 +339,18 @@ void AVehicle::CreateTires()
 
 void AVehicle::CalculateSuspensionDynamics(float DeltaTime, float LongitudinalAcceleration, const float LateralAcceleration)
 {
-		//Update the weight transfers 
-		CalculatePitchWeightTransfer(LongitudinalAcceleration, LateralAcceleration);
-		//Update the suspension compression using ray casts
-		SuspensionRayCast();
-		//Update unsprung masses
-		CalculateUnsprungMassDynamics(DeltaTime);
-		//Update pitch and heave
-		CalculatePitchAndHeaveDynamics(DeltaTime, LongitudinalAcceleration);
-		//Apply Force to the Physics Body to create torque/rotation naturally
-		ApplySuspensionForceEffects();
+	//Update the weight transfers 
+	CalculatePitchWeightTransfer(LongitudinalAcceleration, LateralAcceleration);
+	//Update the suspension compression using ray casts
+	SuspensionRayCast();
+	//Update unsprung masses
+	CalculateUnsprungMassDynamics(DeltaTime);
+	//Update anti squat and dive
+	CalculateCorrectionMoments(DeltaTime);
+	//Update pitch and heave
+	CalculatePitchAndHeaveDynamics(DeltaTime, LongitudinalAcceleration);
+	//Apply Force to the Physics Body to create torque/rotation naturally
+	ApplySuspensionForceEffects();
 }
 
 void AVehicle::CalculateResistiveForce(FVector Velocity)
@@ -409,8 +399,6 @@ void AVehicle::CalculatePitchWeightTransfer(const float LongitudinalAcceleration
 	// Dynamic weight transfer due to longitudinal acceleration
 	// Weight transfer = (Mass × Acceleration × CG Height) / Wheelbase
 	float LongitudinalWeightTransfer = (VehicleMass * LongitudinalAcceleration * CentreOfGravityHeight) / WheelBaseLength;
-	// Multiple weight transfer by anti dive
-	LongitudinalWeightTransfer *= AntiDiveFactor;
 	float LateralForceOnVehicle = LateralAcceleration * VehicleMass;
 	float LateralChangeInTireLoad = TrackWidth > 0 ? LateralForceOnVehicle * (CentreOfGravityHeight / TrackWidth) : 0;
 	// During acceleration (positive), weight transfers to rear
@@ -439,6 +427,38 @@ void AVehicle::CalculatePitchWeightTransfer(const float LongitudinalAcceleration
 	}
 }
 
+void AVehicle::CalculateCorrectionMoments(float DeltaTime)
+{
+	float TotalBrakingForce = 0.0f;
+	float TotalDriveForce = 0.0f;
+	for (UTire* Tire : AllTires)
+	{
+		if (Tire && Tire->IsGrounded && Tire->IsFrontTire)
+		{
+			//Update the total traction
+			if (FMath::Abs(CurrentThrottle) > 0.1 )
+			{
+				TotalDriveForce += GetTireTraction(Tire);
+			}
+
+			//Update the total front braking force
+			if (IsBraking)
+			{
+				TotalBrakingForce += GetTireBrakingForce(Tire, DeltaTime);
+			}
+		}
+	}
+	//Calculate the anti-squat moment
+	AntiSquatMoment = TotalDriveForce *
+		FMath::Tan(FMath::DegreesToRadians(AntiSquatAngle)) *
+		AntiSquatPercentage * WheelBaseLength;
+	//Calculate the anti-dive moment
+	AntiDiveMoment = TotalBrakingForce *
+		FMath::Tan(FMath::DegreesToRadians(AntiDiveAngle)) *
+		AntiDivePercentage * WheelBaseLength;
+
+}
+
 void AVehicle::CalculateUnsprungMassDynamics(float DeltaTime)
 {
 	//Reset the unspring forces
@@ -459,7 +479,7 @@ void AVehicle::CalculateUnsprungMassDynamics(float DeltaTime)
 			float NetUnsprungForce = Tire->TireLoad - SuspensionForce;
 
 			// Update unsprung mass dynamics
-			float UnsprungAcceleration = UnsprungMass  != 0?NetUnsprungForce / UnsprungMass:0;
+			float UnsprungAcceleration = UnsprungMass != 0 ? NetUnsprungForce / UnsprungMass : 0;
 			//Obtain the suspension forces from the wheels and update the unsprung mass positions
 			if (Tire->IsFrontTire)
 			{
@@ -485,14 +505,14 @@ void AVehicle::CalculateUnsprungMassDynamics(float DeltaTime)
 
 void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  LongitudinalAcceleration)
 {
-
-
 	//Use the suspension forces to obtain the pitch moment
 	float PitchMoment = (RearUnsprungForce * DistanceOfCentreOfGravityToRearAxis) - (FrontUnsprungForce * DistanceOfCentreOfGravityToFrontAxis);
 
+	//Apply the corrective moments
+	PitchMoment -= (AntiDiveMoment + AntiSquatMoment);
+
+
 	float WeightTransferMoment = VehicleMass * LongitudinalAcceleration * CentreOfGravityHeight;
-	//Apply anti dive factor
-	WeightTransferMoment *= AntiDiveFactor;
 	PitchMoment += WeightTransferMoment;
 
 	//Get the pitch acceleration from the moment
@@ -526,10 +546,10 @@ void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  Longitudin
 
 void AVehicle::UpdateWheel(UTire* Tire)
 {
-	FVector SocketLocation = SkeletalMesh->GetSocketLocation( Tire->SocketName);
+	FVector SocketLocation = SkeletalMesh->GetSocketLocation(Tire->SocketName);
 	//Get the lateral and longitudinal directions of the wheel
 	FVector WheelForward = Tire->GetForwardVector();
-	FVector WheelRight = FVector::CrossProduct(MeshComponent->GetUpVector(), WheelForward);	
+	FVector WheelRight = FVector::CrossProduct(MeshComponent->GetUpVector(), WheelForward);
 	//Get the wheel's velocity
 	FVector VelocityAtWheel = MeshComponent->GetPhysicsLinearVelocityAtPoint(SocketLocation);
 	float SpeedAtWheel = FVector::DotProduct(VelocityAtWheel, WheelForward);
@@ -557,18 +577,19 @@ void AVehicle::ApplySuspensionForceEffects()
 
 }
 
-void AVehicle::ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction)
+void AVehicle::ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction, bool IsForward)
 {
 	if (abs(ForceMagnitude) > 0)
 	{
-		ApplyLocationForce(ForceMagnitude*Direction, Tire->GetContactPoint());
+		ApplyLocationForce(ForceMagnitude * Direction, Tire->GetContactPoint());
 		// Calculate moment arm to front wheels
 		float FrontMomentArm = FVector::Distance(MeshComponent->GetCenterOfMass(), Tire->GetContactPoint());
 
 		// Calculate the counteracting torque needed
-		float ThrottleMoment = ForceMagnitude * FrontMomentArm;
+		float PitchMoment = ForceMagnitude * FrontMomentArm;
+		PitchMoment *= IsForward ? 1 : -1;
 		// Apply counter-torque
-		FVector PitchCounterTorque = GetActorRightVector() * (ThrottleMoment);
+		FVector PitchCounterTorque = GetActorRightVector() * (PitchMoment);
 		MeshComponent->AddTorqueInRadians(PitchCounterTorque);
 	}
 }
@@ -579,4 +600,41 @@ void AVehicle::ApplyLocationForce(FVector Force, FVector Position)
 	{
 		MeshComponent->AddForceAtLocation(Force, Position);
 	}
+}
+
+float AVehicle::GetTireTraction(UTire* Tire)
+{
+	float ForwardVelocity = FMath::Abs(FVector::DotProduct(
+		MeshComponent->GetPhysicsLinearVelocity(),
+		MeshComponent->GetForwardVector()
+	)) * 0.036f; // Convert to km/h for comparison
+
+	return FMath::Abs(ForwardVelocity) > FormulaThreshold ?
+		Tire->MagicFormula(Tire->GetTraction(CurrentThrottle * ThrottleForce), Tire->GetSlipRatio())
+		: Tire->GetTraction(CurrentThrottle * ThrottleForce);
+}
+
+float AVehicle::GetTireBrakingForce(UTire* Tire, float DeltaTime)
+{
+
+	//Get the wheels speed
+	FVector WheelForward = Tire->GetForwardVector();
+	FVector VelocityAtWheel = MeshComponent->GetPhysicsLinearVelocityAtPoint(SkeletalMesh->GetSocketLocation(Tire->SocketName));
+	float SpeedAtWheel = FMath::Abs(FVector::DotProduct(VelocityAtWheel, WheelForward));
+
+	float SlipRatio = Tire->GetSlipRatio();
+
+
+	// Limit Braking force by tire load and friction
+	float TireGrip = Tire->TireLoad * Tire->GetFrictionCoefficient();
+	// Calculate braking force from slip ratio 
+	float MaxBrakingForce = FMath::Abs(Tire->MagicFormula(TireGrip, SlipRatio));
+
+	//Calculate the total force required to the stop the vehicle
+	float ForceToStop = FMath::Abs(DeltaTime != 0 &&Gravity != 0? (Tire->TireLoad/Gravity * SpeedAtWheel) / DeltaTime : 0);
+
+	//Clamp the braking force
+	float TotalBrakingForce = FMath::Min(ForceToStop, MaxBrakingForce);
+
+	return TotalBrakingForce;
 }
