@@ -73,10 +73,13 @@ float UTire::GetRollingResistance() const
 
 float UTire::GetCompression(const float CurrentDistance)
 {
-	//Calculate the spring compression using the difference between the suspension length and the bottom of the wheel
-	SuspensionCompression = FMath::Max(0.0f, SuspensionSettings.SuspensionLength + SuspensionSettings.WheelRadius - CurrentDistance);
+	//Calculate the spring compression using the difference between the suspension 
+	//length and the bottom of the wheel
+	SuspensionCompression = FMath::Max(0.0f, SuspensionSettings.SuspensionLength + 
+		SuspensionSettings.WheelRadius - CurrentDistance);
 	//Get the compression of the tire using by dividing the TireLoad by the tire Stiffness
-	TireCompression = FMath::Max(0.0f, SuspensionSettings.TireVerticalStiffness != 0 ? TireLoad / SuspensionSettings.TireVerticalStiffness : 0);
+	TireCompression = FMath::Max(0.0f, SuspensionSettings.TireVerticalStiffness != 0 ? TireLoad 
+		/ SuspensionSettings.TireVerticalStiffness : 0);
 	return SuspensionCompression;
 }
 
@@ -87,8 +90,8 @@ float UTire::CalculateSuspensionForce(const float SuspensionVelocity)
 	//Damping = suspension velocity* Damping coefficient
 	float DampingForce = SuspensionVelocity * SuspensionSettings.DampingCoefficient;
 
-	// As the compression of the tire makes it act like a spring we can get the force it provides with to the suspension 
-	// by multiplying compression by tire stiffness.
+	// As the compression of the tire makes it act like a spring we can get the force 
+	// it provides with to the suspension by multiplying compression by tire stiffness.
 	float TireSpringForce = TireCompression * SuspensionSettings.TireVerticalStiffness;
 
 
