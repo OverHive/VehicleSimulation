@@ -51,32 +51,32 @@ void UTire::UpdateWheelRotationalVelocity(const float VehicleSpeed)
 		return;
 	}
 	//Calculate the rotational velocity of the wheel
-	float TargetRotationalVelocity = VehicleSpeed * (SuspensionSettings.WheelRadius);
+	float TargetRotationalVelocity = VehicleSpeed / SuspensionSettings.WheelRadius;
 	//Intro
 	WheelRotationalVelocity = FMath::Lerp(WheelRotationalVelocity, TargetRotationalVelocity, CouplingFactor);
 }
 
-void UTire::UpdateSlipRatio(const float VehicleSpeedAtWheel)
+void UTire::UpdateSlipRatio(const float VehicleSpeedAtWheel, const bool IsBraking)
 {
 	float WheelSurfaceSpeed = GetRotationalVelocity();
-	SlipRatio = FMath::Abs(VehicleSpeedAtWheel) > 0.1f ? (WheelSurfaceSpeed - VehicleSpeedAtWheel) / VehicleSpeedAtWheel : 0;
+	float Denominator = FMath::Abs(IsBraking? VehicleSpeedAtWheel:WheelSurfaceSpeed);
+	SlipRatio = FMath::Abs(Denominator) > 0.1f ? (WheelSurfaceSpeed - VehicleSpeedAtWheel) / Denominator : 0;
 }
 
-void UTire::UpdateSlipAngle(const float VelocityY, const float VelocityX)
+void UTire::UpdateSlipAngle( const float LongitudinalVelocity, const float LateralVelocity)
 {
-	SlipAngle = VelocityX != 0 ? FMath::Atan2(VelocityY, VelocityX) : 0;
+	SlipAngle =  FMath::Atan2( LateralVelocity, LongitudinalVelocity) - SteerAngle;
 }
 float UTire::GetRollingResistance() const
 {
-	return TireLoad * RollingResistanceCoefficient;
+	return IsGrounded?TireLoad * RollingResistanceCoefficient:0;
 }
 
 float UTire::GetCompression(const float CurrentDistance)
 {
 	//Calculate the spring compression using the difference between the suspension 
 	//length and the bottom of the wheel
-	SuspensionCompression = FMath::Max(0.0f, SuspensionSettings.SuspensionLength + 
-		SuspensionSettings.WheelRadius - CurrentDistance);
+	SuspensionCompression = FMath::Max(0.0f, SuspensionSettings.RestPosition- CurrentDistance);
 	//Get the compression of the tire using by dividing the TireLoad by the tire Stiffness
 	TireCompression = FMath::Max(0.0f, SuspensionSettings.TireVerticalStiffness != 0 ? TireLoad 
 		/ SuspensionSettings.TireVerticalStiffness : 0);
@@ -96,10 +96,10 @@ float UTire::CalculateSuspensionForce(const float SuspensionVelocity)
 
 
 	// Total Force = Spring + Tire  - Damping (Damping opposes the velocity)
-	SuspensionForce = SpringForce + TireSpringForce - DampingForce;
+	SuspensionForce = SpringForce - DampingForce;
 	//Clamp the total force to prevent negative values 
 	SuspensionForce = FMath::Max(0.0f, SuspensionForce);
-	return SuspensionForce;
+	return IsGrounded? SuspensionForce:0;
 }
 
 float UTire::MagicFormula(const float peakValue, const float x) const
@@ -115,7 +115,7 @@ void UTire::StoreTireContactLocation(const FVector NewHitLocation)
 	ContactPoint = NewHitLocation;
 }
 
-void UTire::UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness)
+void UTire::UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness, const float UnSprungMass, const float StaticTireLoad)
 {
 	SuspensionSettings.SpringStiffness = Stiffness;
 
@@ -124,6 +124,15 @@ void UTire::UpdateSuspension(const float Stiffness, const float Damping, const f
 	SuspensionSettings.SuspensionLength = SuspensionLength;
 
 	SuspensionSettings.TireVerticalStiffness = TireStiffness;
+
+	SuspensionSettings.UnSpringMass = UnSprungMass;
+
+	//Get the static force on the string with is equal to the unsprung weight subtract from the tire load 
+	float ForceOnSpring = StaticTireLoad;
+
+	//Calculate the resting suspension length
+
+	SuspensionSettings.RestPosition = ForceOnSpring / SuspensionSettings.SpringStiffness;/* + TireLoad / SuspensionSettings.TireVerticalStiffness*/;
 }
 
 UTire::~UTire()

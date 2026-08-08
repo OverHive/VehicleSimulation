@@ -14,6 +14,7 @@ enum TIREINDEX { REARLEFT = 0, REARRIGHT = 1, FRONTLEFT = 2, FRONTRIGHT = 3 };
  *
  */
 
+static float Gravity = 981.0f;
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VEHICLESIMULATION_API UTire : public UStaticMeshComponent
 {
@@ -60,9 +61,9 @@ public:
 	//Store the contact location of the tire
 	void StoreTireContactLocation(const  FVector NewHitLocation);
 	//Update the suspension setting of the wheels
-	void UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness);
+	void UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness, const float UnSprungMass, const float StaticTireLoad);
 	//Updates the tire's slip ratio
-	void UpdateSlipRatio(const float wheelSpeed);
+	void UpdateSlipRatio(const float wheelSpeed, const bool IsBraking);
 	//Updates the current tire load
 	void UpdateTireLoad(float NormalForce);
 	//Updates the tire's angle ratio

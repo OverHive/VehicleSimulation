@@ -118,7 +118,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Suspension")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float PitchInertia = 86.0f;
+	float PitchInertia = 780000.0f; // kg·cm²f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float FrontSuspensionStiffness = 35000.0f;
@@ -133,19 +133,20 @@ public:
 	float RearSuspensionDamping = 2500.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float FrontUnsprungMass = 50.0f;//Kg
+	float FrontUnsprungMass = 10.0f;//Kg
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float RearUnsprungMass = 50.0f;//Kg
+	float RearUnsprungMass = 10.0f;//Kg
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float SuspensionRestLength = 50.0f;//cm
+	float MaxSuspensionLength = 50.0f;//cm
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float UnSprungDamping = 0.95f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float PitchDamping = 0.95f;
-
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
+	float PitchStiffness = 500000.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float HeaveDamping = 0.98f;
 
@@ -175,7 +176,7 @@ private:
 	//Handles the dynamics of the suspension
 	void CalculateSuspensionDynamics(float DeltaTime, float LongitudionalAcceleration, const float LateralAcceleration);
 	//Calculates the resistive force
-	void CalculateResistiveForce(FVector Velocity);
+	void CalculateResistiveForce(FVector Velocity, float DeltaTime);
 	//Calculates pitch weight transfer effects
 	void CalculatePitchWeightTransfer(const float LongitudionalAcceleration, const float LateralAcceleration);
 	//Handles anti-dive and anti-squat moment
@@ -192,15 +193,20 @@ private:
 	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction, bool IsForward = true);
 	//Applies a force at location
 	void ApplyLocationForce(FVector Force,FVector Position);
+	//Obtains the static distribution of the vehicle's weight
+	void UpdateStaticLoads();
 	//Gets the traction force on for a wheel
 	float GetTireTraction(UTire *Tire);
 	//Gets the braking force for a wheel
 	float GetTireBrakingForce(UTire* Tire, float DeltaTime);
+	//Calculates the force needed to stop a wheel
+	float GetWheelStoppingForce(UTire* Tire, float DeltaTime);
+	//Rounds a float to a given number of decimal points
+	float RoundToDecimalPoint(const float Value, const int Points = 3);
 
 	//Note: Forces must be in  cm/s²
 	float FrontSuspensionForce = 0.0f;
 	float RearSuspensionForce = 0.0f;
-	float Gravity = 981.0f;
 	// Stores the input from the joystick/WASD
 	FVector2D CurrentInputDirection;
 	void Input_Throttle(const FInputActionValue& Value);
@@ -213,6 +219,9 @@ private:
 	float CurrentSteering = 0.0f;
 	float CurrentBrake = 0.0f;
 	float CurrentSteeringAngle = 0.0f;
+	float StaticFrontLoad = 0.0f;
+	float StaticRearLoad = 0.0f;
+	float VehicleWeight = 0.0f;
 
 	float AntiDiveMoment = 0;
 	float AntiSquatMoment = 0;
