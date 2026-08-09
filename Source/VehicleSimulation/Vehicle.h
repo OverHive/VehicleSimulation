@@ -190,7 +190,7 @@ private:
 	//Applies suspension forces to the vehicle
 	void ApplySuspensionForceEffects();
 	//Apply a force through a wheel
-	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction, bool IsForward = true);
+	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction);
 	//Applies a force at location
 	void ApplyLocationForce(FVector Force,FVector Position);
 	//Obtains the static distribution of the vehicle's weight

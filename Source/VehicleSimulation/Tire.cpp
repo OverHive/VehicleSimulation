@@ -96,7 +96,7 @@ float UTire::CalculateSuspensionForce(const float SuspensionVelocity)
 
 
 	// Total Force = Spring + Tire  - Damping (Damping opposes the velocity)
-	SuspensionForce = SpringForce - DampingForce;
+	SuspensionForce = SpringForce + TireSpringForce - DampingForce;
 	//Clamp the total force to prevent negative values 
 	SuspensionForce = FMath::Max(0.0f, SuspensionForce);
 	return IsGrounded? SuspensionForce:0;
@@ -110,9 +110,10 @@ float UTire::MagicFormula(const float peakValue, const float x) const
 	return peakValue * sin(ShapeFactor * arc);
 }
 
-void UTire::StoreTireContactLocation(const FVector NewHitLocation)
+void UTire::StoreTireContactInformation(const FHitResult  Hit)
 {
-	ContactPoint = NewHitLocation;
+	ContactPoint = Hit.Location;
+	ContacNormal = Hit.Normal;
 }
 
 void UTire::UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness, const float UnSprungMass, const float StaticTireLoad)
@@ -132,7 +133,7 @@ void UTire::UpdateSuspension(const float Stiffness, const float Damping, const f
 
 	//Calculate the resting suspension length
 
-	SuspensionSettings.RestPosition = ForceOnSpring / SuspensionSettings.SpringStiffness;/* + TireLoad / SuspensionSettings.TireVerticalStiffness*/;
+	SuspensionSettings.RestPosition = ForceOnSpring / SuspensionSettings.SpringStiffness;
 }
 
 UTire::~UTire()

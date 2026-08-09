@@ -59,7 +59,7 @@ public:
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
 	//Store the contact location of the tire
-	void StoreTireContactLocation(const  FVector NewHitLocation);
+	void StoreTireContactInformation(const  FHitResult  NewHitLocation);
 	//Update the suspension setting of the wheels
 	void UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness, const float UnSprungMass, const float StaticTireLoad);
 	//Updates the tire's slip ratio
@@ -70,7 +70,9 @@ public:
 	void UpdateSlipAngle(const float velocityY, const float velocityX);
 
 	//Gets the wheel's contact point
-	FVector GetContactPoint() { return ContactPoint; }
+	FVector GetContactPoint() const { return ContactPoint; }
+	//Returns the direction of the normal force on the wheel 
+	FVector GetContactNormal() const { return ContacNormal; }
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	float SteerAngle = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
@@ -93,12 +95,13 @@ public:
 	FName SocketName;
 	TIREINDEX TirePosition;
 	FWheelSuspensionSetting SuspensionSettings = FWheelSuspensionSetting();
-	FVector ContactPoint = FVector::ZeroVector;
+
 	float TireLoad = 0;
 	bool IsGrounded = false;
 private:
 
-
+	FVector ContactPoint = FVector::ZeroVector;
+	FVector ContacNormal = FVector::ZeroVector;
 	float FrictionCoefficient = 1.4;
 	float SlipRatio = 0.0;
 	float SlipAngle = 0.0;
