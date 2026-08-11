@@ -8,7 +8,7 @@
 #include "Tire.h"
 #include "WheelSuspensionSetting.h"
 #include "Vehicle.generated.h"
-enum Axis {BACK,FRONT};
+enum Axis { BACK, FRONT };
 
 
 UCLASS()
@@ -35,7 +35,7 @@ public:
 	class USkeletalMeshComponent* SkeletalMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class  UStaticMeshComponent* MeshComponent;
+	class  UStaticMeshComponent* PhysicMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class  UStaticMeshComponent* VisualMesh;
@@ -86,17 +86,23 @@ public:
 	//The threshold for activating the magic formula
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float FormulaThreshold = 5.0f; //Km/h
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float GearRatio = 3.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float FinalDriveRatio = 4.0;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	float DrivetrainEfficiency = 0.9;
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float MaxSteeringAngle = 35.0f;      // degrees at full lock
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
-	float AngularDampingWhenSteeringReleased = 2.0f;
+	float AngularDampingWhenSteeringReleased = 20.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float SteeringReleaseThreshold = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
-	float SteeringInterpSpeed = 5.0f;
+	float SteeringInterpSpeed = 20.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float SelfAligningTorqueCoefficient = 5000.0f;  // cm/N
 
@@ -114,6 +120,8 @@ public:
 	UTire* RearRightTire;
 	UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
 	TArray<UTire*> AllTires;
+	UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	TArray<UTire*> FrontTires;
 
 	UPROPERTY(EditAnywhere, Category = "Suspension")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
@@ -150,19 +158,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float HeaveDamping = 0.98f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float AntiDivePercentage = 0.3f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float AntiSquatPercentage = 0.25f;    
-
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float AntiSquatAngle = 20.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float AntiDiveAngle = 20.0f;
-	UPROPERTY(EditAnywhere, Category = "Suspension")
 	float TireVerticalStiffness = 20000000.0f;  // N/cm
 private:
 	//Models vehicle suspension using ray cast
@@ -170,35 +165,35 @@ private:
 	// This function is called by the Enhanced Input System
 	void Move(const FInputActionValue& Value);
 	//Handles braking
-	void ApplyBraking(UTire * Tire, const float VehicleSpeedAtWheel,float DeltaTime);
+	void ApplyBraking(UTire* Tire, const float VehicleSpeedAtWheel, float DeltaTime);
 	//Setup for the tires
 	void CreateTires();
 	//Handles the dynamics of the suspension
 	void CalculateSuspensionDynamics(float DeltaTime, float LongitudionalAcceleration, const float LateralAcceleration);
 	//Calculates the resistive force
-	void CalculateResistiveForce(FVector Velocity, float DeltaTime);
+	void CalculateResistiveForces(FVector Velocity, float DeltaTime);
 	//Calculates pitch weight transfer effects
 	void CalculatePitchWeightTransfer(const float LongitudionalAcceleration, const float LateralAcceleration);
-	//Handles anti-dive and anti-squat moment
-	void CalculateCorrectionMoments(float DeltaTime);
 	//Handles unsprung mass dynamics
 	void CalculateUnsprungMassDynamics(float DeltaTime);
 	// Handles pitch dynamics
-	void CalculatePitchAndHeaveDynamics(float DeltaTime,float LongitudinalAcceleration);
+	void CalculatePitchAndHeaveDynamics(float DeltaTime, float LongitudinalAcceleration);
 	//Updates the state of a wheel
-	void UpdateWheel(UTire* Tire);
+	void UpdateWheel(UTire* Tire, float DeltaTime);
 	//Applies suspension forces to the vehicle
 	void ApplySuspensionForceEffects();
 	//Apply a force through a wheel
 	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction);
 	//Applies a force at location
-	void ApplyLocationForce(FVector Force,FVector Position);
+	void ApplyLocationForce(FVector Force, FVector Position);
 	//Obtains the static distribution of the vehicle's weight
 	void UpdateStaticLoads();
 	//Gets the traction force on for a wheel
-	float GetTireTraction(UTire *Tire);
+	float GetTireTraction(UTire* Tire);
 	//Gets the braking force for a wheel
 	float GetTireBrakingForce(UTire* Tire, float DeltaTime);
+	//Gets the resistive force on a Tire
+	float GetTireRollingResistance(UTire* Tire, float DeltaTime);
 	//Calculates the force needed to stop a wheel
 	float GetWheelStoppingForce(UTire* Tire, float DeltaTime);
 	//Rounds a float to a given number of decimal points
@@ -215,6 +210,7 @@ private:
 	FVector CurrentVelocity = FVector::ZeroVector;
 	FVector LastVelocity = FVector::ZeroVector;
 	FVector Acceleration = FVector::ZeroVector;
+	FVector DefaultVisualMeshPosition = FVector::ZeroVector;
 	float CurrentThrottle = 0.0f;
 	float CurrentSteering = 0.0f;
 	float CurrentBrake = 0.0f;
@@ -222,15 +218,14 @@ private:
 	float StaticFrontLoad = 0.0f;
 	float StaticRearLoad = 0.0f;
 	float VehicleWeight = 0.0f;
-
-	float AntiDiveMoment = 0;
-	float AntiSquatMoment = 0;
 	float FrontUnsprungPosition = 0.0f;
 	float FrontUnsprungVelocity = 0.0f;
 	float RearUnsprungPosition = 0.0f;
 	float RearUnsprungVelocity = 0.0f;
 	float FrontUnsprungForce = 0.0f;
 	float RearUnsprungForce = 0.0f;
+	float CurrentDrivingForce = 0.0f;
+	float CurrentDrag = 0.0f;
 
 	float PitchAngle = 0.0f;
 	float PitchVelocity = 0.0f;
@@ -240,6 +235,7 @@ private:
 	float RearDynamicLoad = 0.0f;
 	float AntiDiveFactor = 1.0f;
 	bool IsBraking = false;
+	bool IsLongitudinalControlled = true;
 	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
 
 };

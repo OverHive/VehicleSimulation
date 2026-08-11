@@ -9,10 +9,6 @@
 #include "Engine/World.h"
 #include "WheelSuspensionSetting.h"
 #include "Tire.generated.h"
-enum TIREINDEX { REARLEFT = 0, REARRIGHT = 1, FRONTLEFT = 2, FRONTRIGHT = 3 };
-/**
- *
- */
 
 static float Gravity = 981.0f;
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -39,23 +35,29 @@ public:
 	float GetSuspensionForce() { return IsGrounded ? SuspensionForce : 0; }
 	//Get the wheel's tire load
 	float GetTireLoad() const { return TireLoad; };
-	//Updates the rotational velocity of the wheel
-	void UpdateWheelRotationalVelocity(const float VehicleSpeed);
 	//Gets the friction coefficient 
 	float GetFrictionCoefficient() const { return FrictionCoefficient; }
 	//Model the force using slip
 	float MagicFormula(const float value, const float x) const;
 	//Returns the tire's slip angle
 	float GetSlipAngle() const { return SlipAngle; };
+	//Returns the rolling radius of wheel
+	float GetRollingRadius() { return RollingRadius; };
+	//Returns the current longitudinal force on the tire
+	float GetCurrentLongitudinalForceOnTire() const {
+		return CurrentLongitudinalForceOnTire;}
 	//Gets the lateral grip of the tire
 	const float GetLateralGrip();
+	//Applies the friction circle to a given force
+	float FrictionCircle(const float LongitudinalForce, const float LaterialForce, const bool LongitudinalLeading) const;
 	//Update the frictionCoefficient
 	void UpdateFrictionCoefficient(const float value) { FrictionCoefficient = value; }
 	//Change the radius of the tire
 	void UpdateTireRadius(const float value) { SuspensionSettings.WheelRadius = value; }
 	//Calculates the maximum load the tire can bear
-	void UpdateMaxTraction();
-
+	void UpdateMaxGrip();
+	//Updates the rotational velocity of the wheel
+	void UpdateWheelRotationalVelocity(const float NetTorque, const float DeltaTime);
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
 	//Store the contact location of the tire
@@ -68,11 +70,18 @@ public:
 	void UpdateTireLoad(float NormalForce);
 	//Updates the tire's angle ratio
 	void UpdateSlipAngle(const float velocityY, const float velocityX);
+	//Calculates the rolling radius of the wheel
+	void UpdateRollingRadius(FVector AxisPosition);
+	//Updates the longitudinal force on the tire
+	void UpdateLongitudinalForce(const float NewForce) { CurrentLongitudinalForceOnTire += NewForce; }
+	//Resets the force on the tire
+	void ResetForces() { CurrentLongitudinalForceOnTire = 0; };
 
 	//Gets the wheel's contact point
 	FVector GetContactPoint() const { return ContactPoint; }
 	//Returns the direction of the normal force on the wheel 
 	FVector GetContactNormal() const { return ContacNormal; }
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	float SteerAngle = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
@@ -93,7 +102,6 @@ public:
 	//For calculating rolling resistance
 	float RollingResistanceCoefficient = 0.015f;
 	FName SocketName;
-	TIREINDEX TirePosition;
 	FWheelSuspensionSetting SuspensionSettings = FWheelSuspensionSetting();
 
 	float TireLoad = 0;
@@ -102,17 +110,19 @@ private:
 
 	FVector ContactPoint = FVector::ZeroVector;
 	FVector ContacNormal = FVector::ZeroVector;
+	float RollingRadius = 0.0f;
 	float FrictionCoefficient = 1.4;
 	float SlipRatio = 0.0;
 	float SlipAngle = 0.0;
 
-	float MaximumWheelTraction = 0.5;
+	float MaxGrip = 0.5;
 	float WheelDamper = 0.98f;
 	float CouplingFactor = 0.1f;
 	float WheelRotationalVelocity = 0.0f;
 	float WheelRotationalInertia = 0.5f;
-	float LastBrakeTorque = 0.0f;
 	float SuspensionForce = 0;
+	float CurrentLongitudinalForceOnTire = 0.0f;
+	const float Inertia = 8500; //Kg/ cm^2
 
 	float TireCompression = 0.0f;
 	float SuspensionCompression = 0.0f;
