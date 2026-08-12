@@ -47,7 +47,7 @@ public:
 	float GetCurrentLongitudinalForceOnTire() const {
 		return CurrentLongitudinalForceOnTire;}
 	//Gets the lateral grip of the tire
-	const float GetLateralGrip();
+	const float GetLateralGrip() const;
 	//Applies the friction circle to a given force
 	float FrictionCircle(const float LongitudinalForce, const float LaterialForce, const bool LongitudinalLeading) const;
 	//Update the frictionCoefficient
@@ -65,7 +65,7 @@ public:
 	//Update the suspension setting of the wheels
 	void UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness, const float UnSprungMass, const float StaticTireLoad);
 	//Updates the tire's slip ratio
-	void UpdateSlipRatio(const float wheelSpeed, const bool IsBraking);
+	void UpdateSlipRatio(const float VehicleSpeed, const bool IsBraking);
 	//Updates the current tire load
 	void UpdateTireLoad(float NormalForce);
 	//Updates the tire's angle ratio
@@ -119,7 +119,6 @@ private:
 	float WheelDamper = 0.98f;
 	float CouplingFactor = 0.1f;
 	float WheelRotationalVelocity = 0.0f;
-	float WheelRotationalInertia = 0.5f;
 	float SuspensionForce = 0;
 	float CurrentLongitudinalForceOnTire = 0.0f;
 	const float Inertia = 8500; //Kg/ cm^2

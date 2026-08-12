@@ -58,9 +58,6 @@ public:
 	float VehicleMass = 150.0f; // kg
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float ThrottleForce = 1500000.0f;//cN
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float BrakeForce = 1000000.0f;//cN
 	//For calculating drag
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float Width = 210.0f;//cm
@@ -80,8 +77,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float DistanceOfCentreOfGravityToRearAxis = 48.0f;//cm/s
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float FinalGearRatio = 5.6;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float TrackWidth = 140.0f;//cm/s
 	//The threshold for activating the magic formula
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
@@ -95,16 +90,9 @@ public:
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float MaxSteeringAngle = 35.0f;      // degrees at full lock
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
-	float AngularDampingWhenSteeringReleased = 20.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
-	float SteeringReleaseThreshold = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float SteeringInterpSpeed = 20.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
-	float SelfAligningTorqueCoefficient = 5000.0f;  // cm/N
 
 	//The vehicle's tires 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
@@ -194,8 +182,8 @@ private:
 	float GetTireBrakingForce(UTire* Tire, float DeltaTime);
 	//Gets the resistive force on a Tire
 	float GetTireRollingResistance(UTire* Tire, float DeltaTime);
-	//Calculates the force needed to stop a wheel
-	float GetWheelStoppingForce(UTire* Tire, float DeltaTime);
+	//Calculates the minimun stopping force on a wheel
+	float GetMinimumWheelForce(UTire* Tire, const float BrakingkingForce, const float DeltaTime);
 	//Rounds a float to a given number of decimal points
 	float RoundToDecimalPoint(const float Value, const int Points = 3);
 

@@ -13,17 +13,18 @@ void UTire::UpdateMaxGrip()
 	MaxGrip = FrictionCoefficient * TireLoad;
 }
 
-const float UTire::GetLateralGrip()
+const float UTire::GetLateralGrip() const
 {
-	return IsGrounded ? -MagicFormula(MaxGrip, GetSlipAngle()) : 0;
+	return IsGrounded ?MagicFormula(MaxGrip, GetSlipAngle()) : 0;
 }
 
 float UTire::FrictionCircle(const float LongitudinalForce, const float LateralForce, const bool LongitudinalLeading) const
 {
+	float SelectedForce = LongitudinalLeading ? LateralForce: LongitudinalForce;
 	//Get maximum force for selected force through a rearrange friction circle
 	float MaxForce =FMath::Pow(MaxGrip, 2) - FMath::Pow(LongitudinalLeading ?LongitudinalForce:LateralForce, 2);
 	//Return the result
-	return MaxForce > 0 ? FMath::Sqrt(MaxForce) : 0;
+	return MaxForce > 0 ? FMath::Sign(SelectedForce) * FMath::Min(FMath::Sqrt(MaxForce),FMath::Abs(SelectedForce)) : 0;
 
 }
 
@@ -52,20 +53,20 @@ void UTire::UpdateTireLoad(float NewWeight)
 
 void UTire::UpdateSlipRatio(const float VehicleSpeedAtWheel, const bool IsBraking)
 {
-	float WheelSurfaceSpeed = GetRotationalVelocity();
-	float Denominator = FMath::Abs(IsBraking ? VehicleSpeedAtWheel : WheelSurfaceSpeed);
+	float WheelSurfaceSpeed = WheelRotationalVelocity * SuspensionSettings.WheelRadius;
+	float Denominator = FMath::Max(FMath::Abs(IsBraking ? VehicleSpeedAtWheel : WheelSurfaceSpeed), 100.0f);
 	SlipRatio = FMath::Abs(Denominator) > 0.1f ? (WheelSurfaceSpeed - VehicleSpeedAtWheel) / Denominator : 0;
 }
 
 void UTire::UpdateSlipAngle(const float LongitudinalVelocity, const float LateralVelocity)
 {
-	SlipAngle = FMath::Atan2(LateralVelocity, LongitudinalVelocity) - SteerAngle;
+	SlipAngle = FMath::Abs(LongitudinalVelocity) < 50.0f?0: FMath::Atan2(LateralVelocity, LongitudinalVelocity);
 }
 void UTire::UpdateRollingRadius(FVector AxisPosition)
 {
-	RollingRadius = !ContactPoint.IsNearlyZero()
-		? FVector::Dist2D(ContactPoint, AxisPosition)
-		: 0;
+	RollingRadius = !ContactPoint.IsNearlyZero()&&IsGrounded
+		? FMath::Abs(AxisPosition.Z - ContactPoint.Z)
+		: SuspensionSettings.WheelRadius;
 }
 float UTire::GetRollingResistance() const
 {
@@ -106,12 +107,12 @@ void UTire::UpdateWheelRotationalVelocity(const float NetTorque, const float Del
 	//If the tire is in the air enter free rotation
 	if (!IsGrounded)
 	{
-		WheelRotationalVelocity *= WheelDamper;
+		WheelRotationalVelocity *= WheelDamper * DeltaTime;
 		return;
 	}
 	float RotationalAcceleration = Inertia != 0 ? NetTorque / Inertia : 0;
 	//Update the rotation velocity with the acceleration
-	WheelRotationalVelocity += WheelRotationalInertia * DeltaTime;
+	WheelRotationalVelocity += RotationalAcceleration * DeltaTime;
 }
 
 float UTire::MagicFormula(const float peakValue, const float x) const
