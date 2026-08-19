@@ -7,6 +7,7 @@
 #include "InputMappingContext.h"
 #include "Tire.h"
 #include "WheelSuspensionSetting.h"
+#include "VehiclePresets.h"
 #include "Vehicle.generated.h"
 enum Axis { BACK, FRONT };
 
@@ -30,6 +31,9 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	//Applies a preset to the vehicle
+	void SetFromPreset(const float Index);
+
 	// --- Components ---
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class USkeletalMeshComponent* SkeletalMesh;
@@ -39,7 +43,6 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class  UStaticMeshComponent* VisualMesh;
-
 	//Input Assets
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputMappingContext* VehicleMappingContext;
@@ -53,11 +56,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* BrakeAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* GearAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* DebugAction;
+
 	// --- Vehicle parameters ---
+	float TotalVehicleMass = 190.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float VehicleMass = 150.0f; // kg
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float ThrottleForce = 1500000.0f;//cN
+	float VehicleSprungMass = 150.0f; // kg
 	//For calculating drag
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float Width = 210.0f;//cm
@@ -87,14 +95,28 @@ public:
 	float FinalDriveRatio = 4.0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float DrivetrainEfficiency = 0.9;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
+	TArray<float> GearRatios = {0.8};
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float MaxSteeringAngle = 35.0f;      // degrees at full lock
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float SteeringInterpSpeed = 20.0f;
+	//The vehicle's tires and their properties
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	float FrontWheelRadius = 30.0f; //cm
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	float RearWheelRadius = 30.0f; //cm
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	float FrontTireVerticalStiffness = 20000000.0f;  // N/cm
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	float RearTireVerticalStiffness = 20000000.0f;  // N/cm
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	float FrontTireFriction = 1.2;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
+	float RearTireFriction = 1.2;
 
-	//The vehicle's tires 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
 	UTire* FrontLeftTire;
 
@@ -117,16 +139,16 @@ public:
 	float PitchInertia = 780000.0f; // kg·cm²f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float FrontSuspensionStiffness = 35000.0f;
+	float FrontSuspensionStiffness = 3500.0f;// Kg/cm
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float RearSuspensionStiffness = 28000.0f;
+	float RearSuspensionStiffness = 2800.0f;// Kg/cm
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float FrontSuspensionDamping = 3000.0f;
+	float FrontSuspensionDamping = 3000.0f;// Ns/cm
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float RearSuspensionDamping = 2500.0f;
+	float RearSuspensionDamping = 2500.0f;//Ns/cm
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float FrontUnsprungMass = 10.0f;//Kg
@@ -135,18 +157,21 @@ public:
 	float RearUnsprungMass = 10.0f;//Kg
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float MaxSuspensionLength = 50.0f;//cm
+	float MaxSuspensionLength = 10.0f;//cm
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float UnSprungDamping = 0.95f;
+	float FrontUnSprungDamping = 0.95f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
+	float RearUnSprungDamping = 0.95f;
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float PitchDamping = 0.95f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float PitchStiffness = 500000.0f;
+	float PitchStiffness = 5000.0f;//N/cm
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float HeaveDamping = 0.98f;
-
-	float TireVerticalStiffness = 20000000.0f;  // N/cm
+	FName VehiclePresetName = "Undefined";
 private:
 	//Models vehicle suspension using ray cast
 	void SuspensionRayCast();
@@ -171,21 +196,25 @@ private:
 	//Applies suspension forces to the vehicle
 	void ApplySuspensionForceEffects();
 	//Apply a force through a wheel
-	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction);
+	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction, bool IsForward);
 	//Applies a force at location
 	void ApplyLocationForce(FVector Force, FVector Position);
 	//Obtains the static distribution of the vehicle's weight
 	void UpdateStaticLoads();
+	//Get throttle from a based engine 
+	float GetDriveForce(float Torque) const;
 	//Gets the traction force on for a wheel
 	float GetTireTraction(UTire* Tire);
 	//Gets the braking force for a wheel
 	float GetTireBrakingForce(UTire* Tire, float DeltaTime);
 	//Gets the resistive force on a Tire
 	float GetTireRollingResistance(UTire* Tire, float DeltaTime);
-	//Calculates the minimun stopping force on a wheel
+	//Calculates the minimum stopping force on a wheel
 	float GetMinimumWheelForce(UTire* Tire, const float BrakingkingForce, const float DeltaTime);
 	//Rounds a float to a given number of decimal points
 	float RoundToDecimalPoint(const float Value, const int Points = 3);
+	//Gets the current rotations per minute of a give tire
+	float CalculateRPM(UTire* tire) const;
 
 	//Note: Forces must be in  cm/s²
 	float FrontSuspensionForce = 0.0f;
@@ -195,10 +224,18 @@ private:
 	void Input_Throttle(const FInputActionValue& Value);
 	void Input_Steering(const FInputActionValue& Value);
 	void Input_Brake(const FInputActionValue& Value);
+	void Input_Debug(const FInputActionValue& Value);
+	void Input_Gear(const FInputActionValue& Value);
 	FVector CurrentVelocity = FVector::ZeroVector;
 	FVector LastVelocity = FVector::ZeroVector;
 	FVector Acceleration = FVector::ZeroVector;
 	FVector DefaultVisualMeshPosition = FVector::ZeroVector;
+	int GearIndex = 0;
+	//Debug configuration
+	float DebugSetting = 0.0f;
+	float DragPrintSpeedThreshold = 1.0f;
+	float LastFakeAcceleration = 0.0f;
+	float FakeAcceleration = -5.0f;
 	float CurrentThrottle = 0.0f;
 	float CurrentSteering = 0.0f;
 	float CurrentBrake = 0.0f;
@@ -206,6 +243,7 @@ private:
 	float StaticFrontLoad = 0.0f;
 	float StaticRearLoad = 0.0f;
 	float VehicleWeight = 0.0f;
+	float VehicleTorque = 0;
 	float FrontUnsprungPosition = 0.0f;
 	float FrontUnsprungVelocity = 0.0f;
 	float RearUnsprungPosition = 0.0f;
@@ -215,6 +253,10 @@ private:
 	float CurrentDrivingForce = 0.0f;
 	float CurrentDrag = 0.0f;
 
+	float ThrottleForce = 150000.0f;//cN
+	float CurrentBrakingForce = 0.0f;//cN
+	TMap <float, float> TorqueCurve;
+	float CurveStep = 0;
 	float PitchAngle = 0.0f;
 	float PitchVelocity = 0.0f;
 	float HeavePosition = 0.0f;
@@ -224,6 +266,7 @@ private:
 	float AntiDiveFactor = 1.0f;
 	bool IsBraking = false;
 	bool IsLongitudinalControlled = true;
+	VehiclePresets VehicleSettings;
 	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
 
 };

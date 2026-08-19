@@ -10,7 +10,7 @@
 #include "WheelSuspensionSetting.h"
 #include "Tire.generated.h"
 
-static float Gravity = 981.0f;
+static float Gravity = 980.0f;
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VEHICLESIMULATION_API UTire : public UStaticMeshComponent
 {
@@ -31,6 +31,8 @@ public:
 	float GetCompression(const float CurrentDistance);
 	//Gets the overall suspension force on the tire
 	float CalculateSuspensionForce(const float SuspensionVelocity);
+	//Gets the normal force on the tire
+	float GetNormalForce() const;
 	//Gets the current suspension force
 	float GetSuspensionForce() { return IsGrounded ? SuspensionForce : 0; }
 	//Get the wheel's tire load
@@ -120,6 +122,7 @@ private:
 	float CouplingFactor = 0.1f;
 	float WheelRotationalVelocity = 0.0f;
 	float SuspensionForce = 0;
+	float NormalForce = 0.0f;
 	float CurrentLongitudinalForceOnTire = 0.0f;
 	const float Inertia = 8500; //Kg/ cm^2
 
