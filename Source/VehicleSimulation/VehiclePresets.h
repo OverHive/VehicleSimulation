@@ -19,5 +19,7 @@ public:
 private:
 	//Produces parameters for replicating the behaviour of a 2009 Chevrolet Corvette GT2
 	void CreatePresetForChevroletCorvetteGT2();
+	//Produces parameters for replicating the behaviour of a SkipBarber 2000
+	void CreatePresetForSkipBarber2000();
 	TArray <CarSettings> Presets;
 };

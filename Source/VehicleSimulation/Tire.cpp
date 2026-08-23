@@ -10,7 +10,7 @@ UTire::UTire()
 
 void UTire::UpdateMaxGrip()
 {
-	MaxGrip = FrictionCoefficient * TireLoad;
+	MaxGrip = TireGrip * TireLoad;
 }
 
 const float UTire::GetLateralGrip() const
@@ -26,6 +26,18 @@ float UTire::FrictionCircle(const float LongitudinalForce, const float LateralFo
 	//Return the result
 	return MaxForce > 0 ? FMath::Sign(SelectedForce) * FMath::Min(FMath::Sqrt(MaxForce), FMath::Abs(SelectedForce)) : 0;
 
+}
+
+void UTire::UpdateTireFrictionCoefficient(const float NewValue)
+{
+	 TireFrictionCoefficient = NewValue; 
+	 UpdateTotalGrip();
+}
+
+void UTire::UpdateFrictionCoefficient(const float NewValue)
+{
+	FrictionCoefficient = NewValue;
+	UpdateTotalGrip();
 }
 
 void UTire::UpdateSteering(const float NewAngle)
@@ -64,9 +76,10 @@ void UTire::UpdateSlipAngle(const float LongitudinalVelocity, const float Latera
 }
 void UTire::UpdateRollingRadius(FVector AxisPosition)
 {
-	RollingRadius = !ContactPoint.IsNearlyZero() && IsGrounded
+	RollingRadius = SuspensionSettings.WheelRadius;
+	/*	SuspensionSettings.WheelRadius+ !ContactPoint.IsNearlyZero() && IsGrounded
 		? FMath::Abs(AxisPosition.Z - ContactPoint.Z)
-		: SuspensionSettings.WheelRadius;
+		: SuspensionSettings.WheelRadius;*/
 }
 float UTire::GetRollingResistance() const
 {
@@ -108,12 +121,14 @@ void UTire::UpdateWheelRotationalVelocity(const float NetTorque, const float Del
 	//If the tire is in the air enter free rotation
 	if (!IsGrounded)
 	{
-		WheelRotationalVelocity *= WheelDamper * DeltaTime;
+		WheelRotationalVelocity *= FMath::Pow(WheelDamper, DeltaTime);
 		return;
 	}
 	float RotationalAcceleration = Inertia != 0 ? NetTorque / Inertia : 0;
 	//Update the rotation velocity with the acceleration
-	WheelRotationalVelocity += RotationalAcceleration * DeltaTime;
+
+	WheelRotationalVelocity += FMath::Pow(RotationalAcceleration, DeltaTime);
+	WheelRotationalVelocity = FMath::Max(WheelRotationalVelocity,0);
 }
 
 float UTire::MagicFormula(const float peakValue, const float x) const
@@ -124,7 +139,7 @@ float UTire::MagicFormula(const float peakValue, const float x) const
 	return peakValue * sin(ShapeFactor * arc);
 }
 
-void UTire::StoreTireContactInformation(const FHitResult  Hit)
+void UTire::StoreTireContactInformation(const FHitResult Hit)
 {
 	ContactPoint = Hit.Location;
 	ContacNormal = Hit.Normal;

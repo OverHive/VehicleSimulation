@@ -96,7 +96,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float DrivetrainEfficiency = 0.9;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	TArray<float> GearRatios = {0.8};
+	TArray<float> GearRatios = { 0.8 };
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float MaxSteeringAngle = 35.0f;      // degrees at full lock
@@ -157,7 +157,7 @@ public:
 	float RearUnsprungMass = 10.0f;//Kg
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float MaxSuspensionLength = 10.0f;//cm
+	float MaxSuspensionLength = 60.0f;//cm
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float FrontUnSprungDamping = 0.95f;
 
@@ -201,7 +201,7 @@ private:
 	void ApplyLocationForce(FVector Force, FVector Position);
 	//Obtains the static distribution of the vehicle's weight
 	void UpdateStaticLoads();
-	//Get throttle from a based engine 
+	//Get throttle from a engine 
 	float GetDriveForce(float Torque) const;
 	//Gets the traction force on for a wheel
 	float GetTireTraction(UTire* Tire);
@@ -214,7 +214,9 @@ private:
 	//Rounds a float to a given number of decimal points
 	float RoundToDecimalPoint(const float Value, const int Points = 3);
 	//Gets the current rotations per minute of a give tire
-	float CalculateRPM(UTire* tire) const;
+	float CalculateRPM(UTire* Tire) const;
+	//Gets the drive torque on a wheel
+	float GetWheelTorque(UTire* Tire) const;
 
 	//Note: Forces must be in  cm/s²
 	float FrontSuspensionForce = 0.0f;
@@ -252,20 +254,27 @@ private:
 	float RearUnsprungForce = 0.0f;
 	float CurrentDrivingForce = 0.0f;
 	float CurrentDrag = 0.0f;
-
 	float ThrottleForce = 150000.0f;//cN
 	float CurrentBrakingForce = 0.0f;//cN
 	TMap <float, float> TorqueCurve;
 	float CurveStep = 0;
+	float MaximumRPM = 0;
+	float MinimumStartingRPM = 0;
 	float PitchAngle = 0.0f;
 	float PitchVelocity = 0.0f;
 	float HeavePosition = 0.0f;
 	float HeaveVelocity = 0.0f;
+	float FrontWheelInertia = 0.0f;
+	float RearWheelInertia = 0.0f;
 	float FrontDynamicLoad = 0.0f;
 	float RearDynamicLoad = 0.0f;
+	float FrontRollingResistanceCoefficient = 0.0f;
+	float RearRollingResistanceCoefficient = 0.0f;
 	float AntiDiveFactor = 1.0f;
 	bool IsBraking = false;
 	bool IsLongitudinalControlled = true;
+	//For preventing multiple gear changes a single press 
+	bool IsGearChanging = false;
 	VehiclePresets VehicleSettings;
 	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
 

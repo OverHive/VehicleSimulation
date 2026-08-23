@@ -47,13 +47,18 @@ public:
 	float GetRollingRadius() { return RollingRadius; };
 	//Returns the current longitudinal force on the tire
 	float GetCurrentLongitudinalForceOnTire() const {
-		return CurrentLongitudinalForceOnTire;}
+		return CurrentLongitudinalForceOnTire;
+	}
 	//Gets the lateral grip of the tire
 	const float GetLateralGrip() const;
 	//Applies the friction circle to a given force
 	float FrictionCircle(const float LongitudinalForce, const float LaterialForce, const bool LongitudinalLeading) const;
-	//Update the frictionCoefficient
-	void UpdateFrictionCoefficient(const float value) { FrictionCoefficient = value; }
+	//Update the frictional coefficient of the tire
+	void UpdateTireFrictionCoefficient(const float NewValue);
+	//Update the friction coefficient
+	void UpdateFrictionCoefficient(const float NewValue);
+	//Update the rolling resistance coefficient
+	void UpdateRollingResistanceCoefficient(const float NewValue) { RollingResistanceCoefficient = NewValue; }
 	//Change the radius of the tire
 	void UpdateTireRadius(const float value) { SuspensionSettings.WheelRadius = value; }
 	//Calculates the maximum load the tire can bear
@@ -76,6 +81,8 @@ public:
 	void UpdateRollingRadius(FVector AxisPosition);
 	//Updates the longitudinal force on the tire
 	void UpdateLongitudinalForce(const float NewForce) { CurrentLongitudinalForceOnTire += NewForce; }
+	//Update the wheel's Inertia
+	void UpdateWheelInertia(float NewInertia) { Inertia = NewInertia; };
 	//Resets the force on the tire
 	void ResetForces() { CurrentLongitudinalForceOnTire = 0; };
 
@@ -110,10 +117,14 @@ public:
 	bool IsGrounded = false;
 private:
 
+	//Updates the total grip of the tire
+	void UpdateTotalGrip() { TireGrip = FrictionCoefficient + TireFrictionCoefficient; };
 	FVector ContactPoint = FVector::ZeroVector;
 	FVector ContacNormal = FVector::ZeroVector;
 	float RollingRadius = 0.0f;
-	float FrictionCoefficient = 1.4;
+	float FrictionCoefficient = 1.4f;
+	float TireFrictionCoefficient = 1.4f;
+	float TireGrip = 1.4f;
 	float SlipRatio = 0.0;
 	float SlipAngle = 0.0;
 
@@ -124,7 +135,7 @@ private:
 	float SuspensionForce = 0;
 	float NormalForce = 0.0f;
 	float CurrentLongitudinalForceOnTire = 0.0f;
-	const float Inertia = 8500; //Kg/ cm^2
+	float Inertia = 8500; //Kg/ cm^2
 
 	float TireCompression = 0.0f;
 	float SuspensionCompression = 0.0f;

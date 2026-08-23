@@ -139,15 +139,18 @@ void AVehicle::Tick(float DeltaTime)
 
 		CurrentDrivingForce = 0.0f;
 		//Apply traction through the front tires
+		int j = 0;
 		for (UTire* Tire : FrontTires)
 		{
 			if (Tire->IsFrontTire)
 			{
+				j++;
 				float TireTraction = GetTireTraction(Tire);
 				if (!IsLongitudinalControlled)
 				{
 					TireTraction = Tire->FrictionCircle(TireTraction, Tire->GetLateralGrip(), IsLongitudinalControlled);
 				}
+				GEngine->AddOnScreenDebugMessage(15 + j, 3.f, FColor::Green, FString::Printf(TEXT("%s's tire traction :%f N"), *Tire->GetName(), TireTraction));
 				ApplyWheelForce(Tire, TireTraction, Tire->GetForwardVector(), Tire->IsFrontTire);
 
 				Tire->UpdateLongitudinalForce(TireTraction);
@@ -216,18 +219,7 @@ void AVehicle::Tick(float DeltaTime)
 		GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Green, FString::Printf(TEXT("Speed %f km/h"), ForwardVelocity));
 		GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Green, FString::Printf(TEXT("Acceleration %f m/s^2"), ForwardAcceleration));
 		GEngine->AddOnScreenDebugMessage(3, 3.f, FColor::Green, FString::Printf(TEXT("Weight %f N"), VehicleSprungMass * Gravity));
-		float ForwardVelocityInMetres = (ForwardVelocity / 0.036) / 100;
-		if (LastFakeAcceleration != FakeAcceleration)
-		{
-			float LateralForceOnVehicle = FakeAcceleration * VehicleSprungMass;
-			float LateralChangeInTireLoad = TrackWidth > 0 ? LateralForceOnVehicle * (CentreOfGravityHeight / TrackWidth) : 0;
-			FText TestMessage = FText::Format(
-				NSLOCTEXT("Name space", "CurrentDrag", "Acceleration : {1} m/s^2, Lateral Weight transfer: {0} Kg"),
-				FText::AsNumber(LateralChangeInTireLoad), FText::AsNumber(FakeAcceleration));
-			FMessageLog MessageLog(FName("testing"));
-			MessageLog.Info(TestMessage);
-			LastFakeAcceleration = FakeAcceleration;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         .0;
-		}
+		GEngine->AddOnScreenDebugMessage(4, 3.f, FColor::Green, FString::Printf(TEXT("Gear: %i"), GearIndex));
 	}
 
 }
@@ -329,6 +321,8 @@ void AVehicle::SetFromPreset(const float Index)
 {
 	//Get the preset
 	CarSettings Preset = VehicleSettings.GetPreset(Index);
+	GearIndex = 0;
+	//Apply the settings
 	VehiclePresetName = Preset.VehicleName;
 	VehicleSprungMass = Preset.VehicleSprungMass;
 	Height = Preset.Height;
@@ -356,6 +350,8 @@ void AVehicle::SetFromPreset(const float Index)
 	RearUnSprungDamping = Preset.RearUnSprungDamping;
 	FrontUnsprungMass = Preset.FrontUnsprungMass;
 	RearUnsprungMass = Preset.RearUnsprungMass;
+	FrontRollingResistanceCoefficient = Preset.FrontRollingResistanceCoefficient;
+	RearRollingResistanceCoefficient = Preset.RearRollingResistanceCoefficient;
 	FrontTireVerticalStiffness = Preset.FrontTireVerticalStiffness;
 	RearTireVerticalStiffness = Preset.RearTireVerticalStiffness;
 	FrontWheelRadius = Preset.FrontWheelRadius;
@@ -365,6 +361,10 @@ void AVehicle::SetFromPreset(const float Index)
 	HeaveDamping = Preset.HeaveDamping;
 	TorqueCurve = Preset.TorqueCurve;
 	CurveStep = Preset.CurveStep;
+	MaximumRPM = Preset.MaxRPM;
+	MinimumStartingRPM = Preset.MinimumStartingRPM;
+	RearWheelInertia = Preset.RearWheelInertia;
+	FrontWheelInertia = Preset.FrontWheelInertia;
 	//Recalculate the loads and updates the tires
 	TotalVehicleMass = VehicleSprungMass + (RearUnsprungMass + FrontUnsprungMass) * 2;
 	PhysicMesh->SetMassOverrideInKg(NAME_None, TotalVehicleMass, true);
@@ -393,14 +393,18 @@ void AVehicle::Input_Debug(const FInputActionValue& Value)
 void AVehicle::Input_Gear(const FInputActionValue& Value)
 {
 	float Switch = Value.Get<float>();
-	if (Switch > 0 && GearIndex + 1 < GearRatios.Num())
+	if (!IsGearChanging)
 	{
-		GearIndex++;
+		if (Switch > 0 && GearIndex + 1 < GearRatios.Num())
+		{
+			GearIndex++;
+		}
+		else if (Switch < 0 && GearIndex - 1 >= 0)
+		{
+			GearIndex--;
+		}
 	}
-	else if (Switch < 0 && GearIndex - 1 >= 0)
-	{
-		GearIndex--;
-	}
+	IsGearChanging = Value.Get<float>() != 0;
 	GearRatio = GearRatios[GearIndex];
 }
 
@@ -436,7 +440,9 @@ void AVehicle::CreateTires()
 				IsFrontTire ? FrontUnsprungMass : RearUnsprungMass, (IsFrontTire ? StaticFrontLoad : StaticRearLoad) / 2);
 			//Update the radius and friction of the wheel based on position
 			Tire->UpdateTireRadius(IsFrontTire ? FrontWheelRadius : RearWheelRadius);
-			Tire->UpdateFrictionCoefficient(IsFrontTire ? FrontTireFriction : RearTireFriction);
+			Tire->UpdateTireFrictionCoefficient(IsFrontTire ? FrontTireFriction : RearTireFriction);
+			Tire->UpdateRollingResistanceCoefficient(IsFrontTire ? FrontRollingResistanceCoefficient : RearRollingResistanceCoefficient);
+			Tire->UpdateWheelInertia(IsFrontTire ? FrontWheelInertia : RearWheelInertia);
 			//Store the socket name with wheel
 			Tire->SocketName = socketNames[i];
 		}
@@ -647,6 +653,13 @@ void AVehicle::ApplySuspensionForceEffects()
 {
 	if (VisualMesh)
 	{
+		for (UTire* Tire : AllTires)
+		{
+			if (Tire->IsGrounded)
+			{
+				ApplyLocationForce(VehicleWeight / 4 * FVector(0, 0, 1), Tire->GetContactPoint());
+			}
+		}
 		// Convert pitch angle (radians) to a rotator
 		FRotator PitchRotation(FMath::RadiansToDegrees(PitchAngle), 0.0f, 0.0f);
 
@@ -668,14 +681,16 @@ void AVehicle::ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direct
 	{
 		ApplyLocationForce(ForceMagnitude * Direction, Tire->GetContactPoint());
 		// Calculate moment arm to front wheels
-		float FrontMomentArm = FVector::Distance(PhysicMesh->GetCenterOfMass(), Tire->GetContactPoint());
-
+		float FrontMomentArm = !Tire->GetContactPoint().IsNearlyZero() ? FVector::Distance(PhysicMesh->GetCenterOfMass(), Tire->GetContactPoint()) : 1;
 		// Calculate the counteracting torque needed
-		float PitchMoment = ForceMagnitude * FrontMomentArm;
-		PitchMoment *= IsForward ? 1 : -1;
-		// Apply counter-torque
-		FVector PitchCounterTorque = GetActorRightVector() * (PitchMoment);
-		PhysicMesh->AddTorqueInRadians(PitchCounterTorque);
+		float PitchMoment = FMath::Max((ForceMagnitude)*FrontMomentArm, 0);
+		if (VehicleWeight / 2 * 40 < abs(PitchMoment))
+		{
+			PitchMoment *= IsForward ? 1 : -1;
+			// Apply counter-torque
+			FVector PitchCounterTorque = GetActorRightVector() * (PitchMoment);
+			PhysicMesh->AddTorqueInRadians(PitchCounterTorque);
+		}
 	}
 }
 
@@ -696,7 +711,7 @@ void AVehicle::UpdateStaticLoads()
 
 float AVehicle::GetDriveForce(const float Torque) const
 {
-	return FrontWheelRadius ? Torque * GearRatio * DrivetrainEfficiency * FinalDriveRatio / FrontWheelRadius : 0;
+	return FrontWheelRadius > 0 ? Torque * GearRatio * DrivetrainEfficiency * FinalDriveRatio / FrontWheelRadius : 0;
 }
 
 float AVehicle::GetTireTraction(UTire* Tire)
@@ -705,12 +720,8 @@ float AVehicle::GetTireTraction(UTire* Tire)
 		PhysicMesh->GetPhysicsLinearVelocity(),
 		PhysicMesh->GetForwardVector()
 	)) * 0.036f; // Convert to km/h for comparison
-	//Calculate the drive force on the tire;
-	float TireRPM = CalculateRPM(Tire);
-	//Retrieve the torque from the torque curve
-	float TorqueIndex = CurveStep != 0 ? CurveStep *FMath::Floor(TireRPM / CurveStep) : 0;
-	float Torque = TorqueCurve.Find(TorqueIndex)?TorqueCurve[TorqueIndex] : 0;
-	float TireDriveForce = GetDriveForce(Torque);
+
+	float TireDriveForce = GetDriveForce(GetWheelTorque(Tire));
 	float Traction = Tire->GetTraction(TireDriveForce);
 	float ForwardForce = FMath::Abs(ForwardVelocity) > FormulaThreshold ?
 		Tire->MagicFormula(Traction, FMath::Abs(Tire->GetSlipRatio()))
@@ -767,5 +778,27 @@ float AVehicle::RoundToDecimalPoint(const float Value, const int Points)
 
 float AVehicle::CalculateRPM(UTire* Tire) const
 {
-	return Tire->GetRotationalVelocity() * GearRatio * FinalDriveRatio * 60 / 2 * PI;
+	return Tire->GetRotationalVelocity() * GearRatio * FinalDriveRatio * 60 / (200 * PI);
+}
+
+float  AVehicle::GetWheelTorque(UTire* Tire) const
+{
+	float TireRPM = FMath::Min(MaximumRPM, CalculateRPM(Tire));
+	//Retrieve the torque from the torque curve
+	float TorqueIndex = CurveStep != 0 ? CurveStep * FMath::Floor(TireRPM / CurveStep) : 0;
+	float Torque = 0;
+	if (TireRPM > MinimumStartingRPM && TorqueCurve.Find(TorqueIndex))
+	{
+		Torque = TorqueCurve[TorqueIndex];
+		GEngine->AddOnScreenDebugMessage(18, 3.f, FColor::Green, FString::Printf(TEXT("RPM :%f N"), CalculateRPM(Tire)));
+	}
+	else if (TorqueCurve.Find(MinimumStartingRPM) && MinimumStartingRPM != 0)
+	{
+		Torque = TorqueCurve[MinimumStartingRPM];
+		GEngine->AddOnScreenDebugMessage(18, 3.f, FColor::Green, FString::Printf(TEXT("RPM :%f N"), MinimumStartingRPM));
+	}
+
+	//As torque curve is in kg*m^2/s^2 convert to kg*cm^2/s^2
+	Torque *= 10000;
+	return Torque;
 }
