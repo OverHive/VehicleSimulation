@@ -187,7 +187,7 @@ void AVehicle::Tick(float DeltaTime)
 				FVector WheelRight = FVector::CrossProduct(PhysicMesh->GetUpVector(), WheelForward);
 				FVector LateralFriction = WheelRight * -DesiredForce;
 
-				ApplyLocationForce(LateralFriction, Tire->GetContactPoint());
+				//ApplyLocationForce(LateralFriction, Tire->GetContactPoint());
 
 				float TireLoad = Tire->TireLoad;
 				if (GEngine)
@@ -237,37 +237,55 @@ void AVehicle::SuspensionRayCast()
 		//Get the Wheel and its corresponding ray
 		const FWheelSuspensionSetting& Wheel = Tire->SuspensionSettings;
 		FVector StartLocation = SkeletalMesh->GetSocketLocation(Tire->SocketName);
-		StartLocation.Z += 2.0f;
 		FVector EndLocation = StartLocation + (RayDirection * (Wheel.SuspensionLength + 1));
 
 		FHitResult Hit;
 		FCollisionQueryParams QueryParameters;
+		QueryParameters.bReturnPhysicalMaterial = true;
 		QueryParameters.AddIgnoredActor(this);
 
 		//Perform the Ray cast
 		if (GetWorld()->LineTraceSingleByChannel(Hit, StartLocation, EndLocation, TraceChannel, QueryParameters))
 		{
 			//Calculate compression using distance from mount point to the ground hit point
-			float CurrentDistance = RoundToDecimalPoint(FVector::Dist(StartLocation, Hit.Location) - 1.0);
+			float CurrentDistance = RoundToDecimalPoint(FVector::Dist(StartLocation, Hit.Location));
 			CurrentDistance = FMath::Min(CurrentDistance, Wheel.SuspensionLength);
+			float Error = TargetHeight - CurrentDistance;
 
 			//Get the compression of the wheel
-			float Compression = Tire->GetCompression(CurrentDistance);
+			float Compression = Tire->GetCompression(CurrentDistance - TargetHeight);
+
 			Tire->IsGrounded = true;
 
 			// We need the velocity of the vehicle at the specific point where the suspension is attached
-			FVector VelocityAtPoint = PhysicMesh->GetPhysicsLinearVelocityAtPoint(StartLocation);
+			FVector VelocityAtPoint = PhysicMesh->GetPhysicsLinearVelocityAtPoint(StartLocation) +
+				FVector::CrossProduct(PhysicMesh->GetPhysicsAngularVelocityInRadians(), PhysicMesh->GetComponentLocation() - StartLocation);
 
 			// The damping force is based on the velocity along the suspension axis (Up Vector)
 			float SuspensionVelocity = FVector::DotProduct(VelocityAtPoint, Tire->GetUpVector());
 			//Update the suspension force of the tire
-			float S = Tire->CalculateSuspensionForce(SuspensionVelocity);
-			GEngine->AddOnScreenDebugMessage(22 + i, 3.f, FColor::Red, FString::Printf(TEXT("%s's tire load :%f N"), *Tire->GetName(), Tire->TireLoad));
+			Tire->CalculateSuspensionForce(SuspensionVelocity);
+			//Update the suspension for the model
+			float SpringForce = Error * SpringStiffness;
+			float DampingForce = FVector::DotProduct(VelocityAtPoint, FVector::UpVector) * Damping;
+			float ForceZ = FMath::Max(SpringForce - DampingForce, 0);
+
+
 			//Store the hit location and normal
 			Tire->StoreTireContactInformation(Hit);
-
 			Tire->UpdateRollingRadius(StartLocation);
-			i++;
+
+			// Update the tire friction
+			UPhysicalMaterial* PhysMat = Hit.PhysMaterial.Get();
+
+			if (PhysMat)
+			{
+				float Friction = PhysMat->Friction;
+				GEngine->AddOnScreenDebugMessage(30, 3.f, FColor::Green, FString::Printf(TEXT("Friction: %f"), Friction));
+				Tire->UpdateFrictionCoefficient(Friction);
+			}
+			//Apply the suspension to the model
+			ApplyLocationForce(FVector(0, 0, ForceZ), Tire->GetContactPoint());
 		}
 		else
 		{
@@ -365,8 +383,11 @@ void AVehicle::SetFromPreset(const float Index)
 	MinimumStartingRPM = Preset.MinimumStartingRPM;
 	RearWheelInertia = Preset.RearWheelInertia;
 	FrontWheelInertia = Preset.FrontWheelInertia;
+	GearIndex = 0;
 	//Recalculate the loads and updates the tires
 	TotalVehicleMass = VehicleSprungMass + (RearUnsprungMass + FrontUnsprungMass) * 2;
+	Damping = VehicleSprungMass * 5;
+	SpringStiffness = VehicleSprungMass * 50;
 	PhysicMesh->SetMassOverrideInKg(NAME_None, TotalVehicleMass, true);
 	UpdateStaticLoads();
 	CreateTires();
@@ -624,7 +645,7 @@ void AVehicle::UpdateWheel(UTire* Tire, float DeltaTime)
 	FVector VelocityAtWheel = PhysicMesh->GetPhysicsLinearVelocityAtPoint(SocketLocation);
 	//Update the steering of the wheel and its rotational velocity
 	Tire->UpdateSteering(CurrentSteeringAngle);
-
+	float Direction = FMath::Sign(FVector::DotProduct(CurrentVelocity, GetActorForwardVector()));
 	//Calculate the braking torque
 	float EffectiveWheelRadius = Tire->GetRollingRadius();
 	float BrakingTorque = EffectiveWheelRadius != 0 ? GetTireBrakingForce(Tire, DeltaTime) / EffectiveWheelRadius : 0;
@@ -635,15 +656,17 @@ void AVehicle::UpdateWheel(UTire* Tire, float DeltaTime)
 
 	float ResistiveTorque = EffectiveWheelRadius != 0 ? (GetTireRollingResistance(Tire, DeltaTime) + CurrentDrag) / EffectiveWheelRadius : 0;
 	//Get the net torque
-	float NetTorque = DriveTorque - BrakingTorque - ResistiveTorque;
+	float NetTorque = Direction * DriveTorque + -Direction * (BrakingTorque + ResistiveTorque);
 
 	//Use the torque to update the velocity of the wheel 
+
 	Tire->UpdateWheelRotationalVelocity(NetTorque, DeltaTime);
+
 
 	//Calculate the lateral and longitudinal speed of the wheel
 	float  LongitudinalVelocity = FVector::DotProduct(VelocityAtWheel, WheelForward);
 	float LateralVelocity = FVector::DotProduct(VelocityAtWheel, WheelRight);
-
+	GEngine->AddOnScreenDebugMessage(20, 3.f, FColor::Green, FString::Printf(TEXT("Direct: %f "), Direction));
 	//Update the slip angle and ratio 
 	Tire->UpdateSlipAngle(LongitudinalVelocity, LateralVelocity);
 	Tire->UpdateSlipRatio(LongitudinalVelocity, IsBraking);
@@ -653,13 +676,6 @@ void AVehicle::ApplySuspensionForceEffects()
 {
 	if (VisualMesh)
 	{
-		for (UTire* Tire : AllTires)
-		{
-			if (Tire->IsGrounded)
-			{
-				ApplyLocationForce(VehicleWeight / 4 * FVector(0, 0, 1), Tire->GetContactPoint());
-			}
-		}
 		// Convert pitch angle (radians) to a rotator
 		FRotator PitchRotation(FMath::RadiansToDegrees(PitchAngle), 0.0f, 0.0f);
 
@@ -680,17 +696,6 @@ void AVehicle::ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direct
 	if (abs(ForceMagnitude) > 0)
 	{
 		ApplyLocationForce(ForceMagnitude * Direction, Tire->GetContactPoint());
-		// Calculate moment arm to front wheels
-		float FrontMomentArm = !Tire->GetContactPoint().IsNearlyZero() ? FVector::Distance(PhysicMesh->GetCenterOfMass(), Tire->GetContactPoint()) : 1;
-		// Calculate the counteracting torque needed
-		float PitchMoment = FMath::Max((ForceMagnitude)*FrontMomentArm, 0);
-		if (VehicleWeight / 2 * 40 < abs(PitchMoment))
-		{
-			PitchMoment *= IsForward ? 1 : -1;
-			// Apply counter-torque
-			FVector PitchCounterTorque = GetActorRightVector() * (PitchMoment);
-			PhysicMesh->AddTorqueInRadians(PitchCounterTorque);
-		}
 	}
 }
 
@@ -698,6 +703,14 @@ void AVehicle::ApplyLocationForce(FVector Force, FVector Position)
 {
 	if (PhysicMesh)
 	{
+		// Calculate moment arm to front wheels
+
+		FVector FrontMomentArm = Position - PhysicMesh->GetCenterOfMass();
+		// Calculate the counteracting torque needed
+		FVector  PitchCounterTorque = FVector::CrossProduct(Force, FrontMomentArm);
+
+
+		PhysicMesh->AddTorqueInRadians(PitchCounterTorque);
 		PhysicMesh->AddForceAtLocation(Force, Position);
 	}
 }
@@ -756,7 +769,7 @@ float AVehicle::GetMinimumWheelForce(UTire* Tire, const float StoppingForce, con
 	float WheelMass = Gravity != 0 ? Tire->TireLoad / Gravity : 0;
 
 	// Calculate the deceleration on the wheel
-	float MaxDeceleration = WheelMass != 0 ? StoppingForce / WheelMass : 0;
+	float MaxDeceleration = WheelMass != 0 ? FMath::Abs(StoppingForce) / WheelMass : 0;
 
 	// Velocity change this frame from force
 	float MaxVelocityChange = MaxDeceleration * DeltaTime;
@@ -778,7 +791,7 @@ float AVehicle::RoundToDecimalPoint(const float Value, const int Points)
 
 float AVehicle::CalculateRPM(UTire* Tire) const
 {
-	return Tire->GetRotationalVelocity() * GearRatio * FinalDriveRatio * 60 / (200 * PI);
+	return MinimumStartingRPM + FMath::Abs(Tire->GetRotationalVelocity()) * GearRatio * FinalDriveRatio * 60 / (200 * PI);
 }
 
 float  AVehicle::GetWheelTorque(UTire* Tire) const
@@ -787,15 +800,10 @@ float  AVehicle::GetWheelTorque(UTire* Tire) const
 	//Retrieve the torque from the torque curve
 	float TorqueIndex = CurveStep != 0 ? CurveStep * FMath::Floor(TireRPM / CurveStep) : 0;
 	float Torque = 0;
-	if (TireRPM > MinimumStartingRPM && TorqueCurve.Find(TorqueIndex))
+	if (TorqueCurve.Find(TorqueIndex))
 	{
 		Torque = TorqueCurve[TorqueIndex];
 		GEngine->AddOnScreenDebugMessage(18, 3.f, FColor::Green, FString::Printf(TEXT("RPM :%f N"), CalculateRPM(Tire)));
-	}
-	else if (TorqueCurve.Find(MinimumStartingRPM) && MinimumStartingRPM != 0)
-	{
-		Torque = TorqueCurve[MinimumStartingRPM];
-		GEngine->AddOnScreenDebugMessage(18, 3.f, FColor::Green, FString::Printf(TEXT("RPM :%f N"), MinimumStartingRPM));
 	}
 
 	//As torque curve is in kg*m^2/s^2 convert to kg*cm^2/s^2

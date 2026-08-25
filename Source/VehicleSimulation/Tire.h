@@ -53,6 +53,8 @@ public:
 	const float GetLateralGrip() const;
 	//Applies the friction circle to a given force
 	float FrictionCircle(const float LongitudinalForce, const float LaterialForce, const bool LongitudinalLeading) const;
+	//Returns the distance the tire is from the ground
+	float GetDistanceFromGround() { return DistanceFromGround; };
 	//Update the frictional coefficient of the tire
 	void UpdateTireFrictionCoefficient(const float NewValue);
 	//Update the friction coefficient
@@ -139,4 +141,5 @@ private:
 
 	float TireCompression = 0.0f;
 	float SuspensionCompression = 0.0f;
+	float DistanceFromGround = 0.0f;
 };

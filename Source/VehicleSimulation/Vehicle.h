@@ -157,7 +157,7 @@ public:
 	float RearUnsprungMass = 10.0f;//Kg
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float MaxSuspensionLength = 60.0f;//cm
+	float MaxSuspensionLength = 50.0f;//cm
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float FrontUnSprungDamping = 0.95f;
 
@@ -246,6 +246,7 @@ private:
 	float StaticRearLoad = 0.0f;
 	float VehicleWeight = 0.0f;
 	float VehicleTorque = 0;
+	float ZOffset = 8.0f;
 	float FrontUnsprungPosition = 0.0f;
 	float FrontUnsprungVelocity = 0.0f;
 	float RearUnsprungPosition = 0.0f;
@@ -273,6 +274,14 @@ private:
 	float AntiDiveFactor = 1.0f;
 	bool IsBraking = false;
 	bool IsLongitudinalControlled = true;
+
+
+	float TargetHeight = 30.0f;
+
+	float SpringStiffness = 5000.0f;
+
+	float Damping = 500.0f;
+
 	//For preventing multiple gear changes a single press 
 	bool IsGearChanging = false;
 	VehiclePresets VehicleSettings;
