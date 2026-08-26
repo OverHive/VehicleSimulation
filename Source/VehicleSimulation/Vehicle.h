@@ -198,7 +198,7 @@ private:
 	//Apply a force through a wheel
 	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction, bool IsForward);
 	//Applies a force at location
-	void ApplyLocationForce(FVector Force, FVector Position);
+	void ApplyLocationForce(FVector Force, FVector Position, bool HasPitch = false);
 	//Obtains the static distribution of the vehicle's weight
 	void UpdateStaticLoads();
 	//Get throttle from a engine 

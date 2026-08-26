@@ -179,19 +179,19 @@ void AVehicle::Tick(float DeltaTime)
 				//Calculate the lateral friction force
 				float DesiredForce = Tire->GetLateralGrip();
 				//Apply friction circle for longitudinal dominated motion
-				if (IsLongitudinalControlled)
+			/*	if (IsLongitudinalControlled)
 				{
 					DesiredForce = Tire->FrictionCircle(Tire->GetCurrentLongitudinalForceOnTire(), DesiredForce, IsLongitudinalControlled);
-				};
+				};*/
 
 				FVector WheelRight = FVector::CrossProduct(PhysicMesh->GetUpVector(), WheelForward);
 				FVector LateralFriction = WheelRight * -DesiredForce;
 
-				//ApplyLocationForce(LateralFriction, Tire->GetContactPoint());
+				ApplyLocationForce(LateralFriction, Tire->GetContactPoint(), true);
 
 				float TireLoad = Tire->TireLoad;
 				if (GEngine)
-					GEngine->AddOnScreenDebugMessage(4 + i, 3.f, FColor::Green, FString::Printf(TEXT("%s's tire load :%f N"), *Tire->GetName(), TireLoad));
+					GEngine->AddOnScreenDebugMessage(4 + i, 3.f, FColor::Green, FString::Printf(TEXT("%s's tire load :%f N"), *Tire->GetName(), DesiredForce));
 				Tire->ResetForces();
 			}
 		}
@@ -473,17 +473,19 @@ void AVehicle::CreateTires()
 void AVehicle::CalculateSuspensionDynamics(float DeltaTime,
 	float LongitudinalAcceleration, const float LateralAcceleration)
 {
-
-	//Update the suspension compression using ray casts
-	SuspensionRayCast();
-	//Update unsprung masses
-	CalculateUnsprungMassDynamics(DeltaTime);
-	//Update pitch and heave
-	CalculatePitchAndHeaveDynamics(DeltaTime, LongitudinalAcceleration);
-	//Update the weight transfers 
-	CalculatePitchWeightTransfer(LongitudinalAcceleration, LateralAcceleration);
-	//Apply Force to the physics body to create visual suspension movement
-	ApplySuspensionForceEffects();
+	if (DeltaTime != 0)
+	{
+		//Update the suspension compression using ray casts
+		SuspensionRayCast();
+		//Update unsprung masses
+		CalculateUnsprungMassDynamics(DeltaTime);
+		//Update pitch and heave
+		CalculatePitchAndHeaveDynamics(DeltaTime, LongitudinalAcceleration);
+		//Update the weight transfers 
+		CalculatePitchWeightTransfer(LongitudinalAcceleration, LateralAcceleration);
+		//Apply Force to the physics body to create visual suspension movement
+		ApplySuspensionForceEffects();
+	}
 }
 
 void AVehicle::CalculateResistiveForces(FVector Velocity, float DeltaTime)
@@ -602,14 +604,19 @@ void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  Longitudin
 	float PitchRestoringMoment = -(PitchStiffness + VehicleSprungMass * Gravity * CentreOfGravityHeight) * FMath::Sin(PitchAngle);
 	GEngine->AddOnScreenDebugMessage(11, 3.f, FColor::Green, FString::Printf(TEXT("Restoring: %i"), abs(PitchRestoringMoment) > abs(PitchMoment)));
 	PitchMoment += PitchRestoringMoment;
+	// Add pitch damping to prevent oscillation
+	float PitchDampingTorque = -PitchDamping * PitchVelocity;
+
+	PitchMoment += PitchDampingTorque;
+
 	//Get the pitch acceleration from the moment
 	float PitchAcceleration = PitchInertia != 0.0f ? PitchMoment / PitchInertia : 0;
 	//Update the pitch velocity and angle
 	PitchVelocity += PitchAcceleration * DeltaTime;
 
-	// Add pitch damping to prevent oscillation
-	PitchVelocity *= FMath::Exp(-PitchDamping * DeltaTime); ;
+	//PitchVelocity *= FMath::Exp(PitchAcceleration * PitchDamping * DeltaTime);
 	PitchAngle += PitchVelocity * DeltaTime;
+
 	GEngine->AddOnScreenDebugMessage(10, 3.f, FColor::Green, FString::Printf(TEXT("Pitch: %f N"), PitchAngle));
 
 	// Clamp pitch angle to realistic limits
@@ -618,7 +625,9 @@ void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  Longitudin
 	float TotalSuspensionForce = FrontUnsprungForce + RearUnsprungForce;
 
 	float NetVerticalForce = TotalSuspensionForce - VehicleWeight;
-
+	//Apply the heave damping effect
+	float HeaveDampingForce = -HeaveDamping * (HeaveVelocity / DeltaTime);
+	NetVerticalForce += HeaveDampingForce;
 	// Add restoring force to bring heave back to equilibrium
 	float HeaveRestoringForce = (FrontSuspensionStiffness + RearSuspensionStiffness) * HeavePosition;
 	NetVerticalForce -= HeaveRestoringForce;
@@ -627,8 +636,6 @@ void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  Longitudin
 	float HeaveAcceleration = VehicleSprungMass != 0 ? NetVerticalForce / VehicleSprungMass : 0;
 	// Update heave velocity and position
 	HeaveVelocity += HeaveAcceleration * DeltaTime;
-	// Add heave damping
-	HeaveVelocity *= FMath::Exp(-HeaveDamping * DeltaTime); ;
 	HeavePosition += HeaveVelocity * DeltaTime;
 
 	// Clamp to realistic limits
@@ -656,17 +663,16 @@ void AVehicle::UpdateWheel(UTire* Tire, float DeltaTime)
 
 	float ResistiveTorque = EffectiveWheelRadius != 0 ? (GetTireRollingResistance(Tire, DeltaTime) + CurrentDrag) / EffectiveWheelRadius : 0;
 	//Get the net torque
-	float NetTorque = Direction * DriveTorque + -Direction * (BrakingTorque + ResistiveTorque);
+	float NetTorque = DriveTorque + -Direction * (BrakingTorque + ResistiveTorque);
 
 	//Use the torque to update the velocity of the wheel 
 
-	Tire->UpdateWheelRotationalVelocity(NetTorque, DeltaTime);
+	Tire->UpdateWheelRotationalVelocity(NetTorque, DeltaTime, Direction >= 0);
 
 
 	//Calculate the lateral and longitudinal speed of the wheel
 	float  LongitudinalVelocity = FVector::DotProduct(VelocityAtWheel, WheelForward);
 	float LateralVelocity = FVector::DotProduct(VelocityAtWheel, WheelRight);
-	GEngine->AddOnScreenDebugMessage(20, 3.f, FColor::Green, FString::Printf(TEXT("Direct: %f "), Direction));
 	//Update the slip angle and ratio 
 	Tire->UpdateSlipAngle(LongitudinalVelocity, LateralVelocity);
 	Tire->UpdateSlipRatio(LongitudinalVelocity, IsBraking);
@@ -699,19 +705,22 @@ void AVehicle::ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direct
 	}
 }
 
-void AVehicle::ApplyLocationForce(FVector Force, FVector Position)
+void AVehicle::ApplyLocationForce(FVector Force, FVector Position, bool HasPitch)
 {
 	if (PhysicMesh)
 	{
-		// Calculate moment arm to front wheels
 
-		FVector FrontMomentArm = Position - PhysicMesh->GetCenterOfMass();
-		// Calculate the counteracting torque needed
-		FVector  PitchCounterTorque = FVector::CrossProduct(Force, FrontMomentArm);
+		if (!HasPitch)
+		{
+			// Calculate moment arm to front wheels
+			FVector FrontMomentArm = Position - PhysicMesh->GetCenterOfMass();
+			// Calculate the counteracting torque needed
+			FVector  PitchCounterTorque = FVector::CrossProduct(Force, FrontMomentArm);
 
 
-		PhysicMesh->AddTorqueInRadians(PitchCounterTorque);
-		PhysicMesh->AddForceAtLocation(Force, Position);
+			PhysicMesh->AddTorqueInRadians(PitchCounterTorque);
+			PhysicMesh->AddForceAtLocation(Force, Position);
+		}
 	}
 }
 
@@ -750,7 +759,7 @@ float AVehicle::GetTireBrakingForce(UTire* Tire, float DeltaTime)
 	// Calculate braking force from slip ratio 
 	float MaxBrakingForce = FMath::Abs(Tire->MagicFormula(TireGrip, SlipRatio));
 
-	return FMath::Min(CurrentBrakingForce, GetMinimumWheelForce(Tire, MaxBrakingForce, DeltaTime)) * CurrentBrake;
+	return GetMinimumWheelForce(Tire, MaxBrakingForce, DeltaTime);
 }
 
 float AVehicle::GetTireRollingResistance(UTire* Tire, float DeltaTime)
@@ -803,9 +812,8 @@ float  AVehicle::GetWheelTorque(UTire* Tire) const
 	if (TorqueCurve.Find(TorqueIndex))
 	{
 		Torque = TorqueCurve[TorqueIndex];
-		GEngine->AddOnScreenDebugMessage(18, 3.f, FColor::Green, FString::Printf(TEXT("RPM :%f N"), CalculateRPM(Tire)));
 	}
-
+	GEngine->AddOnScreenDebugMessage(18, 3.f, FColor::Green, FString::Printf(TEXT("RPM :%f N"), CalculateRPM(Tire)));
 	//As torque curve is in kg*m^2/s^2 convert to kg*cm^2/s^2
 	Torque *= 10000;
 	return Torque;

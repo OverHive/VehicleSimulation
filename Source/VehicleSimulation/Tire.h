@@ -66,7 +66,7 @@ public:
 	//Calculates the maximum load the tire can bear
 	void UpdateMaxGrip();
 	//Updates the rotational velocity of the wheel
-	void UpdateWheelRotationalVelocity(const float NetTorque, const float DeltaTime);
+	void UpdateWheelRotationalVelocity(const float NetTorque, const float DeltaTime, const bool IsForward );
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
 	//Store the contact location of the tire

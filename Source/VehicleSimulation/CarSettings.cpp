@@ -32,6 +32,19 @@ CarSettings::CarSettings(const FName NewVehicleName, const float NewVehicleSprun
 	TorqueCurve = NewTorqueCurve;
 	CurveStep = NewCurveStep;
 	MaxRPM = NewMaximumRPM;
+	FrontRollingResistanceCoefficient = NewFrontRollingResistanceCoefficient;
+	RearRollingResistanceCoefficient = NewRearRollingResistanceCoefficient;
+	PitchStiffness = NewPitchStiffness;
+	FrontSuspensionDamping = NewFrontSuspensionDamping;
+	RearSuspensionDamping = NewRearSuspensionDamping;
+	FrontUnSprungDamping = NewFrontUnSprungDamping;
+	RearUnSprungDamping = NewRearUnSprungDamping;
+	HeaveDamping = NewHeaveDamping;
+
+	FrontSuspensionStiffness = NewFrontSuspensionStiffness;
+	RearSuspensionStiffness = NewRearSuspensionStiffness;
+	FrontTireVerticalStiffness = NewFrontTireVerticalStiffness;
+	RearTireVerticalStiffness = NewRearTireVerticalStiffness;
 
 	//Convert from m^2 to cm^2
 	PitchInertia = NewPitchInertia * 1000;
@@ -47,22 +60,7 @@ CarSettings::CarSettings(const FName NewVehicleName, const float NewVehicleSprun
 	DistanceOfCentreOfGravityToFrontAxis = NewFrontAxisToCOF * 100;
 	DistanceOfCentreOfGravityToRearAxis = NewRearAxisToCOF * 100;
 	TrackWidth = NewTrackWidth * 100;
-	FrontRollingResistanceCoefficient = NewFrontRollingResistanceCoefficient;
-	RearRollingResistanceCoefficient = NewRearRollingResistanceCoefficient;
-
-
-	PitchStiffness = NewPitchStiffness / 100;
-	PitchDamping = NewPitchDamping / 100;
-	FrontSuspensionDamping = NewFrontSuspensionDamping / 100;
-	RearSuspensionDamping = NewRearSuspensionDamping / 100;
-	FrontUnSprungDamping = NewFrontUnSprungDamping / 100;
-	RearUnSprungDamping = NewRearUnSprungDamping / 100;
-
-	FrontSuspensionStiffness = NewFrontSuspensionStiffness / 100;
-	RearSuspensionStiffness = NewRearSuspensionStiffness / 100;
-	FrontTireVerticalStiffness = NewFrontTireVerticalStiffness / 100;
-	RearTireVerticalStiffness = NewRearTireVerticalStiffness / 100;
-	HeaveDamping = NewHeaveDamping / 100;
+	PitchDamping = NewPitchDamping * 100;
 }
 
 CarSettings::~CarSettings()

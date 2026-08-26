@@ -90,7 +90,7 @@ float UTire::GetCompression(const float CurrentDistance)
 {
 	//Calculate the spring compression using the difference between the suspension 
 	//length and the bottom of the wheel
-	SuspensionCompression = FMath::Max(0.0f, SuspensionSettings.RestPosition - CurrentDistance);
+	SuspensionCompression = FMath::Max(0.0f, SuspensionSettings.RestPosition + CurrentDistance);
 	//Get the compression of the tire using by dividing the TireLoad by the tire Stiffness
 	TireCompression = FMath::Max(0.0f, SuspensionSettings.TireVerticalStiffness != 0 ? TireLoad
 		/ SuspensionSettings.TireVerticalStiffness : 0);
@@ -119,7 +119,7 @@ float UTire::GetNormalForce() const
 	return IsGrounded ? TireLoad : 0;
 }
 
-void UTire::UpdateWheelRotationalVelocity(const float NetTorque, const float DeltaTime)
+void UTire::UpdateWheelRotationalVelocity(const float NetTorque, const float DeltaTime, const bool IsForward)
 {
 	if (DeltaTime != 0)
 	{
@@ -130,12 +130,13 @@ void UTire::UpdateWheelRotationalVelocity(const float NetTorque, const float Del
 		}
 		else if (Inertia != 0)
 		{
-			float RotationalAcceleration = FMath::Pow(NetTorque / Inertia, DeltaTime);
+			float RotationalAcceleration = FMath::Sign(NetTorque) * FMath::Pow(FMath::Abs(NetTorque) / Inertia, DeltaTime);
 			//Update the rotation velocity with the acceleration
 			if (RotationalAcceleration != 0)
 			{
 				WheelRotationalVelocity += RotationalAcceleration;
 			}
+			WheelRotationalVelocity = IsForward ? FMath::Max(0, WheelRotationalVelocity) : FMath::Min(0, WheelRotationalVelocity);
 		}
 	}
 }
