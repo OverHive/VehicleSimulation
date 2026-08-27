@@ -15,7 +15,7 @@ void UTire::UpdateMaxGrip()
 
 const float UTire::GetLateralGrip() const
 {
-	return IsGrounded ? MagicFormula(MaxGrip, GetSlipAngle()) : 0;
+	return IsGrounded ? MagicFormula(MaxGrip, FMath::Abs(SlipAngle)) : 0;
 }
 
 float UTire::FrictionCircle(const float LongitudinalForce, const float LateralForce, const bool LongitudinalLeading) const
@@ -26,6 +26,28 @@ float UTire::FrictionCircle(const float LongitudinalForce, const float LateralFo
 	//Return the result
 	return MaxForce > 0 ? FMath::Sign(SelectedForce) * FMath::Min(FMath::Sqrt(MaxForce), FMath::Abs(SelectedForce)) : 0;
 
+}
+
+FVector UTire::GetLateralForceVector() const
+{
+	if (!IsGrounded || FMath::Abs(SlipAngle) < KINDA_SMALL_NUMBER)
+	{
+		return FVector::ZeroVector;
+	}
+
+	// Get the tire's local coordinate system
+	FVector TireForward = GetForwardVector();
+	FVector TireUp = GetUpVector();
+	FVector TireRight = FVector::CrossProduct(TireUp, TireForward);
+
+	// Calculate lateral force magnitude using Magic Formula
+	float LateralForceMagnitude = MagicFormula(MaxGrip, FMath::Abs(SlipAngle));
+
+	// Apply force opposite to slip direction
+	// If slip angle is positive (sliding right), force pushes left (negative right direction)
+	float ForceDirection = -FMath::Sign(SlipAngle);
+
+	return TireRight * (ForceDirection * LateralForceMagnitude);
 }
 
 void UTire::UpdateTireFrictionCoefficient(const float NewValue)

@@ -49,6 +49,7 @@ public:
 	float GetCurrentLongitudinalForceOnTire() const {
 		return CurrentLongitudinalForceOnTire;
 	}
+
 	//Gets the lateral grip of the tire
 	const float GetLateralGrip() const;
 	//Applies the friction circle to a given force
@@ -56,6 +57,10 @@ public:
 	//Returns the distance the tire is from the ground
 	float GetDistanceFromGround() { return DistanceFromGround; };
 	//Update the frictional coefficient of the tire
+
+	//Check
+	FVector GetLateralForceVector() const;
+
 	void UpdateTireFrictionCoefficient(const float NewValue);
 	//Update the friction coefficient
 	void UpdateFrictionCoefficient(const float NewValue);

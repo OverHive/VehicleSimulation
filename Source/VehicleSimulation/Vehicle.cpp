@@ -177,21 +177,31 @@ void AVehicle::Tick(float DeltaTime)
 				UpdateWheel(Tire, DeltaTime);
 
 				//Calculate the lateral friction force
-				float DesiredForce = Tire->GetLateralGrip();
-				//Apply friction circle for longitudinal dominated motion
-			/*	if (IsLongitudinalControlled)
-				{
-					DesiredForce = Tire->FrictionCircle(Tire->GetCurrentLongitudinalForceOnTire(), DesiredForce, IsLongitudinalControlled);
-				};*/
+				FVector LateralFriction = Tire->GetLateralForceVector();
 
-				FVector WheelRight = FVector::CrossProduct(PhysicMesh->GetUpVector(), WheelForward);
-				FVector LateralFriction = WheelRight * -DesiredForce;
+				// Apply friction circle for combined longitudinal/lateral forces
+				if (IsLongitudinalControlled)
+				{
+					float LongitudinalForce = Tire->GetCurrentLongitudinalForceOnTire();
+					float LateralForceMag = LateralFriction.Size();
+
+					// Apply friction circle limiting
+					float LimitedLateralForce = Tire->FrictionCircle(LongitudinalForce, LateralForceMag, true);
+
+					// Scale the lateral force vector to the limited magnitude
+					if (LateralFriction.Size() > KINDA_SMALL_NUMBER)
+					{
+						LateralFriction = LateralFriction.GetSafeNormal() * LimitedLateralForce;
+					}
+				}
 
 				ApplyLocationForce(LateralFriction, Tire->GetContactPoint(), true);
 
 				float TireLoad = Tire->TireLoad;
 				if (GEngine)
-					GEngine->AddOnScreenDebugMessage(4 + i, 3.f, FColor::Green, FString::Printf(TEXT("%s's tire load :%f N"), *Tire->GetName(), DesiredForce));
+					GEngine->AddOnScreenDebugMessage(4 + i, 3.f, FColor::Green,
+						FString::Printf(TEXT("%s's lateral force: %f N, slip: %f rad"),
+							*Tire->GetName(), LateralFriction.Size(), Tire->GetSlipAngle()));
 				Tire->ResetForces();
 			}
 		}
@@ -705,22 +715,25 @@ void AVehicle::ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direct
 	}
 }
 
-void AVehicle::ApplyLocationForce(FVector Force, FVector Position, bool HasPitch)
+void AVehicle::ApplyLocationForce(FVector Force, FVector Position, bool IsTurning)
 {
 	if (PhysicMesh)
 	{
 
-		if (!HasPitch)
-		{
+
 			// Calculate moment arm to front wheels
 			FVector FrontMomentArm = Position - PhysicMesh->GetCenterOfMass();
 			// Calculate the counteracting torque needed
 			FVector  PitchCounterTorque = FVector::CrossProduct(Force, FrontMomentArm);
 
+			//Allow Z-axis torque for turning
+			if (IsTurning)
+			{
+				PitchCounterTorque.Z = 0;
+			}
+		PhysicMesh->AddTorqueInRadians(PitchCounterTorque);
 
-			PhysicMesh->AddTorqueInRadians(PitchCounterTorque);
-			PhysicMesh->AddForceAtLocation(Force, Position);
-		}
+		PhysicMesh->AddForceAtLocation(Force, Position);
 	}
 }
 
