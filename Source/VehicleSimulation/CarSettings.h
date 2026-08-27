@@ -12,7 +12,8 @@ class VEHICLESIMULATION_API CarSettings
 public:
 	//|---------------------------------Vehicle class -----------------------------|
 	FName VehicleName = "preset";
-	//|---------------------------------Vehicle dimensions ------------------------|
+	float TotalVehicleMass = 10.f;
+	//|---------------------------------Vehicle dimensions and mass ------------------------|
 	float VehicleSprungMass = 0.0f;
 	float Height = 0.0f;
 	float Width = 0.0f;
@@ -45,12 +46,13 @@ public:
 	float RearUnsprungMass = 0.0f;
 	float RearTireVerticalStiffness = 0.0f;
 	float RearUnSprungDamping = 0.0f;
-
+	float FrontBrakeTorque = 0.0f;
 	//|---------------------------------Rear wheels -------------------------------|
 	float RearWheelRadius = 0.0f;
 	float RearTireFriction = 0.0f;
-	float RearWheelInertia = 0.0f;	
-	float RearRollingResistanceCoefficient = 0.0f;	
+	float RearWheelInertia = 0.0f;
+	float RearRollingResistanceCoefficient = 0.0f;
+	float RearBrakeTorque = 0.0f;
 	//|---------------------------------Engine parameters -------------------------|
 	TArray<float> GearRatios;
 	float FinalDriveRatio = 0.0f;
@@ -62,15 +64,16 @@ public:
 	float MaxRPM = 0;
 	//|---------------------------------End ---------------------------------------|
 	CarSettings();
-	CarSettings(const FName NewVehicleName, const float NewVehicleSprungMass,  const float NewHeight, const float NewWidth,
+	CarSettings(const FName NewVehicleName, const float NewVehicleSprungMass, const float NewHeight, const float NewWidth,
 		const float NewDragCoefficient, const float NewWheelBaseLength, const float NewCOFHeight, const float NewFrontAxisToCOF,
 		const float NewRearAxisToCOF, const float NewTrackWidth, const TArray<float> NewGearRatios, const float NewFinalDriveRatio,
-		const float NewDrivetrainEfficiency,const float NewPitchInertia, const float NewPitchStiffness, const float NewPitchDamping,
+		const float NewDrivetrainEfficiency, const float NewPitchInertia, const float NewPitchStiffness, const float NewPitchDamping,
 		const float NewFrontSuspensionStiffness, const float NewRearSuspensionStiffness, const float NewFrontSuspensionDamping, const float NewRearSuspensionDamping,
-		const float NewFrontUnSprungDamping, const float NewRearUnSprungDamping,const float NewFrontUnsprungMass, const float NewRearUnsprungMass,
+		const float NewFrontUnSprungDamping, const float NewRearUnSprungDamping, const float NewFrontUnsprungMass, const float NewRearUnsprungMass,
 		const float NewFrontTireVerticalStiffness, const float NewRearTireVerticalStiffness, const float NewFrontWheelRadius, const float NewRearWheelRadius,
 		const float NewFrontTireFriction, const float NewRearTireFriction, const float NewHeaveDamping, TMap <float, float> NewTorqueCurve,
 		float const NewCurveStep, const float NewMaximunRPM, const float NewMinimumStartingRPM, const float NewFrontRollingResistanceCoefficient,
-		const float NewRearRollingResistanceCoefficient, const float NewFrontWheelInertia, const float NewRearWheelInertia);
+		const float NewRearRollingResistanceCoefficient, const float NewFrontWheelInertia, const float NewRearWheelInertia, const float NewFrontBrakeTorque,
+		const float NewRearBrakeTorque);
 	~CarSettings();
 };

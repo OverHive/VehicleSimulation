@@ -62,39 +62,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* DebugAction;
 
-	// --- Vehicle parameters ---
-	float TotalVehicleMass = 190.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float VehicleSprungMass = 150.0f; // kg
-	//For calculating drag
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float Width = 210.0f;//cm
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float Height = 150.0f;//cm
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float AirDensity = 1.20;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
-	float DragCoefficient = 0.30;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float WheelBaseLength = 107.0f;//cm/s
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float CentreOfGravityHeight = 30.0f;//cm/s
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float DistanceOfCentreOfGravityToFrontAxis = 59.0f;//cm/s
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float DistanceOfCentreOfGravityToRearAxis = 48.0f;//cm/s
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float TrackWidth = 140.0f;//cm/s
+
 	//The threshold for activating the magic formula
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float FormulaThreshold = 5.0f; //Km/h
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float GearRatio = 3.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float FinalDriveRatio = 4.0;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	float DrivetrainEfficiency = 0.9;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	TArray<float> GearRatios = { 0.8 };
 	//Vehicle steering
@@ -104,18 +80,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float SteeringInterpSpeed = 20.0f;
 	//The vehicle's tires and their properties
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
-	float FrontWheelRadius = 30.0f; //cm
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
-	float RearWheelRadius = 30.0f; //cm
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
-	float FrontTireVerticalStiffness = 20000000.0f;  // N/cm
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
-	float RearTireVerticalStiffness = 20000000.0f;  // N/cm
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
-	float FrontTireFriction = 1.2;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
-	float RearTireFriction = 1.2;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
 	UTire* FrontLeftTire;
@@ -136,41 +100,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Suspension")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float PitchInertia = 780000.0f; // kg·cm²f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float FrontSuspensionStiffness = 3500.0f;// Kg/cm
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float RearSuspensionStiffness = 2800.0f;// Kg/cm
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float FrontSuspensionDamping = 3000.0f;// Ns/cm
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float RearSuspensionDamping = 2500.0f;//Ns/cm
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float FrontUnsprungMass = 10.0f;//Kg
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float RearUnsprungMass = 10.0f;//Kg
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float MaxSuspensionLength = 50.0f;//cm
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float FrontUnSprungDamping = 0.95f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float RearUnSprungDamping = 0.95f;
-
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float PitchDamping = 0.95f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float PitchStiffness = 5000.0f;//N/cm
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
-	float HeaveDamping = 0.98f;
 	FName VehiclePresetName = "Undefined";
 private:
 	//Models vehicle suspension using ray cast
@@ -246,7 +176,6 @@ private:
 	float StaticRearLoad = 0.0f;
 	float VehicleWeight = 0.0f;
 	float VehicleTorque = 0;
-	float ZOffset = 8.0f;
 	float FrontUnsprungPosition = 0.0f;
 	float FrontUnsprungVelocity = 0.0f;
 	float RearUnsprungPosition = 0.0f;
@@ -255,23 +184,12 @@ private:
 	float RearUnsprungForce = 0.0f;
 	float CurrentDrivingForce = 0.0f;
 	float CurrentDrag = 0.0f;
-	float ThrottleForce = 150000.0f;//cN
-	float CurrentBrakingForce = 0.0f;//cN
-	TMap <float, float> TorqueCurve;
-	float CurveStep = 0;
-	float MaximumRPM = 0;
-	float MinimumStartingRPM = 0;
 	float PitchAngle = 0.0f;
 	float PitchVelocity = 0.0f;
 	float HeavePosition = 0.0f;
 	float HeaveVelocity = 0.0f;
-	float FrontWheelInertia = 0.0f;
-	float RearWheelInertia = 0.0f;
 	float FrontDynamicLoad = 0.0f;
 	float RearDynamicLoad = 0.0f;
-	float FrontRollingResistanceCoefficient = 0.0f;
-	float RearRollingResistanceCoefficient = 0.0f;
-	float AntiDiveFactor = 1.0f;
 	bool IsBraking = false;
 	bool IsLongitudinalControlled = true;
 
@@ -284,6 +202,8 @@ private:
 
 	//For preventing multiple gear changes a single press 
 	bool IsGearChanging = false;
+	//
+	CarSettings CurrentPresets;
 	VehiclePresets VehicleSettings;
 	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
 

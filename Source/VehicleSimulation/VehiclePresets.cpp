@@ -35,7 +35,7 @@ void VehiclePresets::CreatePresetForChevroletCorvetteGT2()
 		80000.0f, 81000.0f, 32.52f, 35.28f,
 		2.0f, 2.09f, 350000.f, TorqueMap,
 		250, 9250, 500, 0.0118,
-		0.0133, 1.096f, 1.603f));
+		0.0133, 1.096f, 1.603f, 5234.4f, 3111.2f));
 }
 
 void VehiclePresets::CreatePresetForSkipBarber2000()

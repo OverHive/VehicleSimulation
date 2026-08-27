@@ -44,18 +44,17 @@ public:
 	//Returns the tire's slip angle
 	float GetSlipAngle() const { return SlipAngle; };
 	//Returns the rolling radius of wheel
-	float GetRollingRadius() { return RollingRadius; };
+	float GetRollingRadius() const { return RollingRadius; };
 	//Returns the current longitudinal force on the tire
 	float GetCurrentLongitudinalForceOnTire() const {
 		return CurrentLongitudinalForceOnTire;
 	}
-
+	//Return the braking force of the tire
+	float GetBrakingForce() const;
 	//Gets the lateral grip of the tire
 	const float GetLateralGrip() const;
 	//Applies the friction circle to a given force
 	float FrictionCircle(const float LongitudinalForce, const float LaterialForce, const bool LongitudinalLeading) const;
-	//Returns the distance the tire is from the ground
-	float GetDistanceFromGround() { return DistanceFromGround; };
 	//Update the frictional coefficient of the tire
 
 	//Check
@@ -91,8 +90,9 @@ public:
 	//Update the wheel's Inertia
 	void UpdateWheelInertia(float NewInertia) { Inertia = NewInertia; };
 	//Resets the force on the tire
-	void ResetForces() { CurrentLongitudinalForceOnTire = 0; };
-
+	void ResetForces() { CurrentLongitudinalForceOnTire = 0; }
+	//Updates the braking torque of the wheel
+	void UpdateBrakingTorque(const float NewBrakingTorque) { BrakingTorque = NewBrakingTorque; }
 	//Gets the wheel's contact point
 	FVector GetContactPoint() const { return ContactPoint; }
 	//Returns the direction of the normal force on the wheel 
@@ -143,8 +143,8 @@ private:
 	float NormalForce = 0.0f;
 	float CurrentLongitudinalForceOnTire = 0.0f;
 	float Inertia = 8500; //Kg/ cm^2
+	float BrakingTorque = 0;
 
 	float TireCompression = 0.0f;
 	float SuspensionCompression = 0.0f;
-	float DistanceFromGround = 0.0f;
 };

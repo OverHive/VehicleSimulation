@@ -16,7 +16,8 @@ CarSettings::CarSettings(const FName NewVehicleName, const float NewVehicleSprun
 	const float NewFrontTireVerticalStiffness, const float NewRearTireVerticalStiffness, const float NewFrontWheelRadius, const float NewRearWheelRadius,
 	const float NewFrontTireFriction, const float NewRearTireFriction, const float NewHeaveDamping, TMap <float, float> NewTorqueCurve, float const NewCurveStep
 	, const float NewMaximumRPM, const float NewMinimumStartingRPM, const float NewFrontRollingResistanceCoefficient, const float NewRearRollingResistanceCoefficient,
-	const float NewFrontWheelInertia, const float NewRearWheelInertia)
+	const float NewFrontWheelInertia, const float NewRearWheelInertia, const float NewFrontBrakeTorque,
+	const float NewRearBrakeTorque)
 {
 	MinimumStartingRPM = NewMinimumStartingRPM;
 	VehicleName = NewVehicleName;
@@ -47,9 +48,11 @@ CarSettings::CarSettings(const FName NewVehicleName, const float NewVehicleSprun
 	RearTireVerticalStiffness = NewRearTireVerticalStiffness;
 
 	//Convert from m^2 to cm^2
-	PitchInertia = NewPitchInertia * 1000;
-	FrontWheelInertia = NewFrontWheelInertia * 1000;
-	RearWheelInertia = NewRearWheelInertia * 1000;
+	PitchInertia = NewPitchInertia * 10000;
+	FrontWheelInertia = NewFrontWheelInertia * 10000;
+	RearWheelInertia = NewRearWheelInertia * 10000;
+	FrontBrakeTorque = NewFrontBrakeTorque*10000;
+	RearBrakeTorque = NewRearBrakeTorque * 10000;
 	//Convert from m to cm
 	FrontWheelRadius = NewFrontWheelRadius;
 	RearWheelRadius = NewRearWheelRadius;
@@ -61,6 +64,8 @@ CarSettings::CarSettings(const FName NewVehicleName, const float NewVehicleSprun
 	DistanceOfCentreOfGravityToRearAxis = NewRearAxisToCOF * 100;
 	TrackWidth = NewTrackWidth * 100;
 	PitchDamping = NewPitchDamping * 100;
+
+	TotalVehicleMass = VehicleSprungMass + 2 * (FrontUnsprungMass+RearUnsprungMass);
 }
 
 CarSettings::~CarSettings()

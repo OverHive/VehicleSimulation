@@ -13,6 +13,13 @@ void UTire::UpdateMaxGrip()
 	MaxGrip = TireGrip * TireLoad;
 }
 
+float UTire::GetBrakingForce() const
+{
+	//Calculate the braking force from the torque based
+	float BrakingForce = SuspensionSettings.WheelRadius != 0 ? BrakingTorque / SuspensionSettings.WheelRadius : 0;
+	return GetTraction(BrakingForce);
+}
+
 const float UTire::GetLateralGrip() const
 {
 	return IsGrounded ? MagicFormula(MaxGrip, FMath::Abs(SlipAngle)) : 0;
@@ -44,7 +51,6 @@ FVector UTire::GetLateralForceVector() const
 	float LateralForceMagnitude = MagicFormula(MaxGrip, FMath::Abs(SlipAngle));
 
 	// Apply force opposite to slip direction
-	// If slip angle is positive (sliding right), force pushes left (negative right direction)
 	float ForceDirection = -FMath::Sign(SlipAngle);
 
 	return TireRight * (ForceDirection * LateralForceMagnitude);
@@ -116,8 +122,6 @@ float UTire::GetCompression(const float CurrentDistance)
 	//Get the compression of the tire using by dividing the TireLoad by the tire Stiffness
 	TireCompression = FMath::Max(0.0f, SuspensionSettings.TireVerticalStiffness != 0 ? TireLoad
 		/ SuspensionSettings.TireVerticalStiffness : 0);
-	//Store the actual distance from the ground
-	DistanceFromGround = CurrentDistance;
 	return SuspensionCompression;
 }
 
