@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 
+
 /** The class for creating individual vehicle presents
  *
  */
@@ -62,7 +63,11 @@ public:
 	float CurveStep = 0;
 	TMap <float, float> TorqueCurve;
 	float MaxRPM = 0;
-	//|---------------------------------End ---------------------------------------|
+	//|--------------------------------- Tire features ---------------------------------------|
+	TArray<float> StiffnessFactors = { 0.0f,0.0f,0.0f };
+	TArray<float> ShapeFactors = {0.0f,0.0f,0.0f};
+	TArray<float> CurvatureFactors = {0.0f,0.0f,0.0f};
+	//|-------------------------------- End ---------------------------------------|
 	CarSettings();
 	CarSettings(const FName NewVehicleName, const float NewVehicleSprungMass, const float NewHeight, const float NewWidth,
 		const float NewDragCoefficient, const float NewWheelBaseLength, const float NewCOFHeight, const float NewFrontAxisToCOF,
@@ -74,6 +79,6 @@ public:
 		const float NewFrontTireFriction, const float NewRearTireFriction, const float NewHeaveDamping, TMap <float, float> NewTorqueCurve,
 		float const NewCurveStep, const float NewMaximunRPM, const float NewMinimumStartingRPM, const float NewFrontRollingResistanceCoefficient,
 		const float NewRearRollingResistanceCoefficient, const float NewFrontWheelInertia, const float NewRearWheelInertia, const float NewFrontBrakeTorque,
-		const float NewRearBrakeTorque);
+		const float NewRearBrakeTorque, const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors);
 	~CarSettings();
 };

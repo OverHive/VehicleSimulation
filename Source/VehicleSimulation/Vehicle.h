@@ -71,8 +71,6 @@ public:
 	float FormulaThreshold = 5.0f; //Km/h
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float GearRatio = 3.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
-	TArray<float> GearRatios = { 0.8 };
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float MaxSteeringAngle = 35.0f;      // degrees at full lock
@@ -134,7 +132,7 @@ private:
 	//Get throttle from a engine 
 	float GetDriveForce(float Torque) const;
 	//Gets the traction force on for a wheel
-	float GetTireTraction(UTire* Tire);
+	float GetTireDriveForce(UTire* Tire);
 	//Gets the braking force for a wheel
 	float GetTireBrakingForce(UTire* Tire, float DeltaTime);
 	//Gets the resistive force on a Tire
@@ -194,11 +192,13 @@ private:
 	bool IsLongitudinalControlled = true;
 
 
+
 	float TargetHeight = 30.0f;
 
 	float SpringStiffness = 5000.0f;
 
 	float Damping = 500.0f;
+	FVector MeshDimension = FVector::ZeroVector;
 
 	//For preventing multiple gear changes a single press 
 	bool IsGearChanging = false;

@@ -10,7 +10,20 @@
 #include "WheelSuspensionSetting.h"
 #include "Tire.generated.h"
 
+//For selecting the appropriate factors for Magic formula based on the action of the wheel
+static enum WHEELMODE { ACCELERATION = 0, BRAKING = 1, CORNERING = 2 };
 static float Gravity = 980.0f;
+static FVector GetMeshDimensions(UStaticMeshComponent* MeshComponent)
+{
+	FVector Origin;
+	FVector BoxExtent;
+	//Get the  bounds of the mesh
+	MeshComponent->GetLocalBounds(Origin, BoxExtent);
+	//Multiply the bounds to get the size
+	FVector MeshSize = BoxExtent * 2.0f;
+	return MeshSize;
+}
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VEHICLESIMULATION_API UTire : public UStaticMeshComponent
 {
@@ -40,7 +53,7 @@ public:
 	//Gets the friction coefficient 
 	float GetFrictionCoefficient() const { return FrictionCoefficient; }
 	//Model the force using slip
-	float MagicFormula(const float value, const float x) const;
+	float MagicFormula(const float value, const float x, const int Index) const;
 	//Returns the tire's slip angle
 	float GetSlipAngle() const { return SlipAngle; };
 	//Returns the rolling radius of wheel
@@ -51,26 +64,26 @@ public:
 	}
 	//Return the braking force of the tire
 	float GetBrakingForce() const;
-	//Gets the lateral grip of the tire
-	const float GetLateralGrip() const;
 	//Applies the friction circle to a given force
 	float FrictionCircle(const float LongitudinalForce, const float LaterialForce, const bool LongitudinalLeading) const;
-	//Update the frictional coefficient of the tire
-
-	//Check
+	//Get the inertia of the wheels
+	float GetWheelInertia() const { return Inertia; };
+	//Returns longitudinal force that acts on the tires based on the drive force 
+	float GetLongitudinalForce(const float LongitidinalForceMagnitude, const float LateralForceMagnitude, const bool IsLongitudinalLeading, const bool ShouldUseFormula) const;
+	//Returns the lateral force on the tire
 	FVector GetLateralForceVector() const;
-
+	//Update the frictional coefficient of the tire
 	void UpdateTireFrictionCoefficient(const float NewValue);
 	//Update the friction coefficient
 	void UpdateFrictionCoefficient(const float NewValue);
 	//Update the rolling resistance coefficient
 	void UpdateRollingResistanceCoefficient(const float NewValue) { RollingResistanceCoefficient = NewValue; }
 	//Change the radius of the tire
-	void UpdateTireRadius(const float value) { SuspensionSettings.WheelRadius = value; }
+	void UpdateTireRadius(const float value);
 	//Calculates the maximum load the tire can bear
 	void UpdateMaxGrip();
 	//Updates the rotational velocity of the wheel
-	void UpdateWheelRotationalVelocity(const float NetTorque, const float DeltaTime, const bool IsForward );
+	void UpdateWheelRotationalVelocity(const float DriveForce, const float TireForce, const float ResistiveForce, const float RotationSign, const float DeltaTime);
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
 	//Store the contact location of the tire
@@ -93,10 +106,18 @@ public:
 	void ResetForces() { CurrentLongitudinalForceOnTire = 0; }
 	//Updates the braking torque of the wheel
 	void UpdateBrakingTorque(const float NewBrakingTorque) { BrakingTorque = NewBrakingTorque; }
+	//Updates the Magic formula parameters
+	void UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors);
 	//Gets the wheel's contact point
+	//Handles updating the Rotational velocity when under Magic formula threshold
+	void ClampToVehicleWheelSpeed(const float WheelSpeed);
+	//Gets the dimensions of the tire mesh
+	void StoreTireMeshDimensions();
 	FVector GetContactPoint() const { return ContactPoint; }
 	//Returns the direction of the normal force on the wheel 
 	FVector GetContactNormal() const { return ContacNormal; }
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+	class  UStaticMeshComponent* WheelMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	float SteerAngle = 0.0f;
@@ -104,16 +125,14 @@ public:
 	bool IsFrontTire = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	bool IsRightTire = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tire")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
+	float Inertia = 8500; //Kg/ cm^2
 	//It dictates how quickly the tire builds up grip as slip 
-	float StiffnessFactor = 1.5f;
+	TArray<float> StiffnessFactors;
 	//Determines the overall shape of the curve 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tire")
-	float ShapeFactor = 1.3f;
+	TArray<float> ShapeFactors;
 	//Determines how much grip is lost once the tire starts sliding 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tire")
-	float CurvatureFactor = 0.5f;
+	TArray<float> CurvatureFactors;
 
 	//For calculating rolling resistance
 	float RollingResistanceCoefficient = 0.015f;
@@ -142,9 +161,8 @@ private:
 	float SuspensionForce = 0;
 	float NormalForce = 0.0f;
 	float CurrentLongitudinalForceOnTire = 0.0f;
-	float Inertia = 8500; //Kg/ cm^2
 	float BrakingTorque = 0;
-
 	float TireCompression = 0.0f;
 	float SuspensionCompression = 0.0f;
+	FVector WheelMeshDimension = FVector::ZeroVector;
 };

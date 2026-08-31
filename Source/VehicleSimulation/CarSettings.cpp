@@ -16,8 +16,8 @@ CarSettings::CarSettings(const FName NewVehicleName, const float NewVehicleSprun
 	const float NewFrontTireVerticalStiffness, const float NewRearTireVerticalStiffness, const float NewFrontWheelRadius, const float NewRearWheelRadius,
 	const float NewFrontTireFriction, const float NewRearTireFriction, const float NewHeaveDamping, TMap <float, float> NewTorqueCurve, float const NewCurveStep
 	, const float NewMaximumRPM, const float NewMinimumStartingRPM, const float NewFrontRollingResistanceCoefficient, const float NewRearRollingResistanceCoefficient,
-	const float NewFrontWheelInertia, const float NewRearWheelInertia, const float NewFrontBrakeTorque,
-	const float NewRearBrakeTorque)
+	const float NewFrontWheelInertia, const float NewRearWheelInertia, const float NewFrontBrakeTorque,const float NewRearBrakeTorque,
+	const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors)
 {
 	MinimumStartingRPM = NewMinimumStartingRPM;
 	VehicleName = NewVehicleName;
@@ -40,12 +40,17 @@ CarSettings::CarSettings(const FName NewVehicleName, const float NewVehicleSprun
 	RearSuspensionDamping = NewRearSuspensionDamping;
 	FrontUnSprungDamping = NewFrontUnSprungDamping;
 	RearUnSprungDamping = NewRearUnSprungDamping;
+	PitchDamping = NewPitchDamping;
 	HeaveDamping = NewHeaveDamping;
 
 	FrontSuspensionStiffness = NewFrontSuspensionStiffness;
 	RearSuspensionStiffness = NewRearSuspensionStiffness;
 	FrontTireVerticalStiffness = NewFrontTireVerticalStiffness;
 	RearTireVerticalStiffness = NewRearTireVerticalStiffness;
+	
+	CurvatureFactors = NewCurvatureFactors;
+	StiffnessFactors = NewStiffnessFactors;
+	ShapeFactors = NewShapeFactors;
 
 	//Convert from m^2 to cm^2
 	PitchInertia = NewPitchInertia * 10000;
@@ -54,8 +59,8 @@ CarSettings::CarSettings(const FName NewVehicleName, const float NewVehicleSprun
 	FrontBrakeTorque = NewFrontBrakeTorque*10000;
 	RearBrakeTorque = NewRearBrakeTorque * 10000;
 	//Convert from m to cm
-	FrontWheelRadius = NewFrontWheelRadius;
-	RearWheelRadius = NewRearWheelRadius;
+	FrontWheelRadius = NewFrontWheelRadius*100;
+	RearWheelRadius = NewRearWheelRadius*100;
 	Height = NewHeight * 100;
 	Width = NewWidth * 100;
 	WheelBaseLength = NewWheelBaseLength * 100;
@@ -63,7 +68,6 @@ CarSettings::CarSettings(const FName NewVehicleName, const float NewVehicleSprun
 	DistanceOfCentreOfGravityToFrontAxis = NewFrontAxisToCOF * 100;
 	DistanceOfCentreOfGravityToRearAxis = NewRearAxisToCOF * 100;
 	TrackWidth = NewTrackWidth * 100;
-	PitchDamping = NewPitchDamping * 100;
 
 	TotalVehicleMass = VehicleSprungMass + 2 * (FrontUnsprungMass+RearUnsprungMass);
 }
