@@ -105,8 +105,6 @@ private:
 	void SuspensionRayCast();
 	// This function is called by the Enhanced Input System
 	void Move(const FInputActionValue& Value);
-	//Handles braking
-	void ApplyBraking(UTire* Tire, const float VehicleSpeedAtWheel, float DeltaTime);
 	//Setup for the tires
 	void CreateTires();
 	//Handles the dynamics of the suspension
@@ -120,7 +118,7 @@ private:
 	// Handles pitch dynamics
 	void CalculatePitchAndHeaveDynamics(float DeltaTime, float LongitudinalAcceleration);
 	//Updates the state of a wheel
-	void UpdateWheel(UTire* Tire, float DeltaTime);
+	void UpdateWheel(UTire* Tire, const float LongitudinalForceMagnitude, const float LateralForceMagnitude, float DeltaTime);
 	//Applies suspension forces to the vehicle
 	void ApplySuspensionForceEffects();
 	//Apply a force through a wheel
@@ -133,8 +131,8 @@ private:
 	float GetDriveForce(float Torque) const;
 	//Gets the traction force on for a wheel
 	float GetTireDriveForce(UTire* Tire);
-	//Gets the braking force for a wheel
-	float GetTireBrakingForce(UTire* Tire, float DeltaTime);
+	//Gets the absolute braking force for a wheel
+	float GetUnSignedTireBrakingForce(UTire* Tire, float DeltaTime);
 	//Gets the resistive force on a Tire
 	float GetTireRollingResistance(UTire* Tire, float DeltaTime);
 	//Calculates the minimum stopping force on a wheel
@@ -188,6 +186,7 @@ private:
 	float HeaveVelocity = 0.0f;
 	float FrontDynamicLoad = 0.0f;
 	float RearDynamicLoad = 0.0f;
+	bool IsUsingMagicFormula = false;
 	bool IsBraking = false;
 	bool IsLongitudinalControlled = true;
 

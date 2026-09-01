@@ -32,8 +32,8 @@ public:
 	// Sets default values for this actor's properties
 	UTire();
 	~UTire();
-	//Calculates the traction of the tire
-	float GetTraction(const float ThrottleForce) const;
+	//Clamps a force to the tire's  max grip
+	float ClampToTireGrip(const float ThrottleForce) const;
 	//Returns the angle velocity of the wheel
 	float GetRotationalVelocity() { return WheelRotationalVelocity; };
 	//Returns the float slip ratio
@@ -58,10 +58,6 @@ public:
 	float GetSlipAngle() const { return SlipAngle; };
 	//Returns the rolling radius of wheel
 	float GetRollingRadius() const { return RollingRadius; };
-	//Returns the current longitudinal force on the tire
-	float GetCurrentLongitudinalForceOnTire() const {
-		return CurrentLongitudinalForceOnTire;
-	}
 	//Return the braking force of the tire
 	float GetBrakingForce() const;
 	//Applies the friction circle to a given force
@@ -69,7 +65,7 @@ public:
 	//Get the inertia of the wheels
 	float GetWheelInertia() const { return Inertia; };
 	//Returns longitudinal force that acts on the tires based on the drive force 
-	float GetLongitudinalForce(const float LongitidinalForceMagnitude, const float LateralForceMagnitude, const bool IsLongitudinalLeading, const bool ShouldUseFormula) const;
+	float GetTireReactionForce(const float LateralForceMagnitude, const bool IsLongitudinalLeading) const;
 	//Returns the lateral force on the tire
 	FVector GetLateralForceVector() const;
 	//Update the frictional coefficient of the tire
@@ -83,7 +79,7 @@ public:
 	//Calculates the maximum load the tire can bear
 	void UpdateMaxGrip();
 	//Updates the rotational velocity of the wheel
-	void UpdateWheelRotationalVelocity(const float DriveForce, const float TireForce, const float ResistiveForce, const float RotationSign, const float DeltaTime);
+	void UpdateWheelRotationalVelocity(const float DriveForce, const float TireForce, const float ResistiveForce, const float GroundSpeed, const float DeltaTime);
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
 	//Store the contact location of the tire
@@ -98,19 +94,15 @@ public:
 	void UpdateSlipAngle(const float velocityY, const float velocityX);
 	//Calculates the rolling radius of the wheel
 	void UpdateRollingRadius(FVector AxisPosition);
-	//Updates the longitudinal force on the tire
-	void UpdateLongitudinalForce(const float NewForce) { CurrentLongitudinalForceOnTire += NewForce; }
 	//Update the wheel's Inertia
 	void UpdateWheelInertia(float NewInertia) { Inertia = NewInertia; };
-	//Resets the force on the tire
-	void ResetForces() { CurrentLongitudinalForceOnTire = 0; }
 	//Updates the braking torque of the wheel
 	void UpdateBrakingTorque(const float NewBrakingTorque) { BrakingTorque = NewBrakingTorque; }
 	//Updates the Magic formula parameters
 	void UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors);
 	//Gets the wheel's contact point
 	//Handles updating the Rotational velocity when under Magic formula threshold
-	void ClampToVehicleWheelSpeed(const float WheelSpeed);
+	void ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTime);
 	//Gets the dimensions of the tire mesh
 	void StoreTireMeshDimensions();
 	FVector GetContactPoint() const { return ContactPoint; }
@@ -160,7 +152,6 @@ private:
 	float WheelRotationalVelocity = 0.0f;
 	float SuspensionForce = 0;
 	float NormalForce = 0.0f;
-	float CurrentLongitudinalForceOnTire = 0.0f;
 	float BrakingTorque = 0;
 	float TireCompression = 0.0f;
 	float SuspensionCompression = 0.0f;

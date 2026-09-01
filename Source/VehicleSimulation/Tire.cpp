@@ -37,7 +37,7 @@ float UTire::GetBrakingForce() const
 {
 	//Calculate the braking force from the torque based
 	float BrakingForce = SuspensionSettings.WheelRadius != 0 ? BrakingTorque / SuspensionSettings.WheelRadius : 0;
-	return GetTraction(BrakingForce);
+	return BrakingForce;
 }
 
 float UTire::FrictionCircle(const float LongitudinalForce, const float LateralForce, const bool LongitudinalLeading) const
@@ -50,7 +50,7 @@ float UTire::FrictionCircle(const float LongitudinalForce, const float LateralFo
 
 }
 
-float UTire::GetLongitudinalForce(const float LongitudinalForceMagnitude, const float LateralForceMagnitude, const bool IsLongitudinalLeading, const bool ShouldUseFormula) const
+float UTire::GetTireReactionForce(const float LateralForceMagnitude, const bool IsLongitudinalLeading) const
 {
 	//Ignore for grounded wheels
 	if (!IsGrounded)
@@ -60,8 +60,7 @@ float UTire::GetLongitudinalForce(const float LongitudinalForceMagnitude, const 
 	//Select mode based on slip ratio(breaking mode for negative slip ratios, acceleration mode for positive slip)
 	const int Mode = SlipRatio >= 0.0f ? WHEELMODE::ACCELERATION : WHEELMODE::BRAKING;
 	//Calculate the force based on the Magic formula
-	float RawLongitudinalForce = ShouldUseFormula ? MagicFormula(MaxGrip, FMath::Abs(SlipRatio), Mode) : LongitudinalForceMagnitude;
-	RawLongitudinalForce = FMath::Abs(RawLongitudinalForce) * FMath::Sign(LongitudinalForceMagnitude);
+	float RawLongitudinalForce = MagicFormula(MaxGrip, SlipRatio, Mode);
 	//Limit by friction circle
 	return FrictionCircle(RawLongitudinalForce, LateralForceMagnitude, false);
 }
@@ -134,7 +133,7 @@ void UTire::UpdateSlipRatio(const float VehicleSpeedAtWheel, const bool IsBrakin
 {
 	float WheelSurfaceSpeed = WheelRotationalVelocity * SuspensionSettings.WheelRadius;
 	float Denominator = FMath::Abs(IsBraking ? VehicleSpeedAtWheel : WheelSurfaceSpeed);
-	SlipRatio = FMath::Abs(Denominator) > 0.1f ? (WheelSurfaceSpeed - FMath::Abs(VehicleSpeedAtWheel)) / Denominator : 0;
+	SlipRatio = FMath::Abs(Denominator) > 0.1f ? (WheelSurfaceSpeed - VehicleSpeedAtWheel) / Denominator : 0;
 }
 
 void UTire::UpdateSlipAngle(const float LongitudinalVelocity, const float LateralVelocity)
@@ -155,12 +154,13 @@ void UTire::UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const T
 	CurvatureFactors = NewCurvatureFactors;
 }
 
-void UTire::ClampToVehicleWheelSpeed(const float WheelSpeed)
+void UTire::ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTime)
 {
 	float Radius = SuspensionSettings.WheelRadius;
 	//If the tire is in the air skip
 	if (!IsGrounded)
 	{
+		WheelRotationalVelocity *= FMath::Pow(WheelDamper, DeltaTime);
 		return;
 	}
 
@@ -208,7 +208,7 @@ float UTire::GetNormalForce() const
 	return IsGrounded ? TireLoad : 0;
 }
 
-void UTire::UpdateWheelRotationalVelocity(const float DriveForce, const float TireForce, const float ResistiveForce, const float RotationSign, const float DeltaTime)
+void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude, const float TireForce, const float ResistiveForce,const float GroundSpeed, const float DeltaTime)
 {
 	float Radius = SuspensionSettings.WheelRadius;
 	if (DeltaTime != 0)
@@ -217,33 +217,32 @@ void UTire::UpdateWheelRotationalVelocity(const float DriveForce, const float Ti
 		if (!IsGrounded)
 		{
 			WheelRotationalVelocity *= FMath::Pow(WheelDamper, DeltaTime);
+			return ;
 		}
-
+		float RotationSign = WheelRotationalVelocity >= 0 ? 1 : -1;
 		if (Inertia != 0 && Radius != 0)
 		{
 			//Calculate the net force on the wheel
-			const float NetForce = DriveForce - RotationSign * (TireForce + ResistiveForce);
+			const float NetForce = LongitudinalForceMagnitude - TireForce - RotationSign * ResistiveForce;
 			//Convert the force in to a torque
 			float NetTorque = NetForce * Radius;
-			//
-			if (TireForce == 0 && DriveForce != 0)
-			{
-				NetTorque = Inertia;
-			}
+
 			//Calculate the acceleration
-			float RotationalAcceleration = (NetTorque / Inertia) * DeltaTime;
+			float RotationalVelocityPerFrame = (NetTorque / Inertia) * DeltaTime;
 			//Calculate the maximum speed change the wheel can undergo per time period
-			const float MaxSurfaceSpeedChange = 0.05f *
-				FMath::Max(FMath::Abs(WheelRotationalVelocity * Radius), 100.0f);
+			//based on the wheel's ground speed and surface speed
+			const float SurfaceSpeed = WheelRotationalVelocity * Radius;
+			const float SpeedScale = FMath::Max3(FMath::Abs(SurfaceSpeed), FMath::Abs(GroundSpeed), 10.0f);
+			const float MaxSurfaceSpeedChange = 0.05 * DeltaTime * SpeedScale; 
 			//Clamp the acceleration based on the maximum velocity change
-			RotationalAcceleration = FMath::Clamp(RotationalAcceleration,
+			RotationalVelocityPerFrame = FMath::Clamp(RotationalVelocityPerFrame,
 				-MaxSurfaceSpeedChange / Radius, MaxSurfaceSpeedChange / Radius);
 			//Prevent the wheel from swapping directions in a single frame
-			RotationalAcceleration = RotationSign >= 0 ? FMath::Max(RotationalAcceleration, -WheelRotationalVelocity) : FMath::Min(RotationalAcceleration, -WheelRotationalVelocity);
+			RotationalVelocityPerFrame = RotationSign >= 0 ? FMath::Max(RotationalVelocityPerFrame, -WheelRotationalVelocity) : FMath::Min(RotationalVelocityPerFrame, -WheelRotationalVelocity);
 			//Update the rotation velocity with the acceleration
-			if (RotationalAcceleration != 0)
+			if (RotationalVelocityPerFrame != 0)
 			{
-				WheelRotationalVelocity += RotationalAcceleration;
+				WheelRotationalVelocity += RotationalVelocityPerFrame;
 			}
 		}
 	}
@@ -284,17 +283,15 @@ void UTire::UpdateSuspension(const float Stiffness, const float Damping, const f
 	//Calculate the resting suspension length
 
 	SuspensionSettings.RestPosition = SuspensionSettings.SpringStiffness != 0 ? TireLoad / SuspensionSettings.SpringStiffness : 0;
-	ResetForces();
-
 }
 
 UTire::~UTire()
 {
 }
 
-float UTire::GetTraction(const float ThrottleForce) const
+float UTire::ClampToTireGrip(const float ThrottleForce) const
 {
-	return IsFrontTire && IsGrounded ?
+	return IsGrounded ?
 		FMath::Clamp(ThrottleForce, -MaxGrip, MaxGrip)
 		: 0;
 }

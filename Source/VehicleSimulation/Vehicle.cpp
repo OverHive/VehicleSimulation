@@ -85,22 +85,6 @@ void AVehicle::BeginPlay()
 		}
 	}
 }
-void AVehicle::ApplyBraking(UTire* Tire, const float VehicleSpeedAtWheel, float DeltaTime)
-{
-	if (Tire->IsGrounded && FMath::Abs(VehicleSpeedAtWheel) > 20.0f)
-	{
-		// Apply braking force at contact point in the opposite  direction to the velocity
-
-		float BrakingForce = GetTireBrakingForce(Tire, DeltaTime);
-		if (!IsLongitudinalControlled)
-		{
-			BrakingForce = Tire->FrictionCircle(BrakingForce, Tire->GetLateralForceVector().Size(), IsLongitudinalControlled);
-		}
-		Tire->UpdateLongitudinalForce(BrakingForce);
-
-		ApplyWheelForce(Tire, BrakingForce, -FMath::Sign(VehicleSpeedAtWheel) * Tire->GetForwardVector(), !Tire->IsFrontTire);
-	}
-}
 // Called every frame
 void AVehicle::Tick(float DeltaTime)
 {
@@ -111,6 +95,9 @@ void AVehicle::Tick(float DeltaTime)
 		FakeAcceleration += DebugSetting > 0 ? 1 : -1;
 		DebugSetting = 0;
 	}
+
+	float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, PhysicMesh->GetForwardVector() * 0.036));
+	IsUsingMagicFormula = ForwardVelocity > FormulaThreshold;
 
 	Super::Tick(DeltaTime);
 	CurrentSteeringAngle = FMath::FInterpTo(CurrentSteeringAngle, CurrentSteering * MaxSteeringAngle, DeltaTime, SteeringInterpSpeed);
@@ -145,23 +132,71 @@ void AVehicle::Tick(float DeltaTime)
 				FVector WheelForward = Tire->GetForwardVector();
 				FVector VelocityAtWheel = PhysicMesh->GetPhysicsLinearVelocityAtPoint(SkeletalMesh->GetSocketLocation(Tire->SocketName));
 				float SpeedAtWheel = FVector::DotProduct(VelocityAtWheel, WheelForward);
+				FVector LateralFriction = Tire->GetLateralForceVector();
+				float LongitudinalForce = 0;
 
-				//Handle braking
-				if (IsBraking)
+				//---------------------------Handles longitudinal forces --------------------
+				LongitudinalForce += GetTireDriveForce(Tire) - Tire->GetBrakingForce() * CurrentBrake * FMath::Sign(SpeedAtWheel);
+
+				//Apply friction circle for lateral dominated motion
+				if (!IsLongitudinalControlled)
 				{
-					ApplyBraking(Tire, SpeedAtWheel, DeltaTime);
+					LongitudinalForce = Tire->FrictionCircle(LongitudinalForce, LateralFriction.Size(), false);
 				}
-				//Update the wheel's parameters 
-				UpdateWheel(Tire, DeltaTime);
+				//Apply the longitudinal forces
+				ApplyWheelForce(Tire, LongitudinalForce, WheelForward, false);
+
+				//--------------------------- end ------------------------------------------
+
+				//---------------------------Handles lateral forces ------------------------
+				//Apply friction circle for longitudinal dominated motion
+
+				if (IsLongitudinalControlled)
+				{
+					float LateralForceMag = LateralFriction.Size();
+
+					// Apply friction circle limiting
+					if (LateralFriction.Size() > KINDA_SMALL_NUMBER)
+					{
+						LateralFriction = LateralFriction.GetSafeNormal() * Tire->FrictionCircle(LongitudinalForce, LateralForceMag, true);
+					}
+				}
+				float LateralForceMagnitude = LateralFriction.Size();
+				//Apply the lateral friction force
+				ApplyLocationForce(LateralFriction, Tire->GetContactPoint(), true);
+				//--------------------------- end ------------------------------------------
+
+				//---------------------------Update wheel parameters------------------------
+				UpdateWheel(Tire, LongitudinalForce, LateralFriction.Size(), DeltaTime);
+				//--------------------------- end ------------------------------------------
 
 
 
+	//Calculate the tire reaction force
+				const float TireForce = Tire->GetTireReactionForce(LateralForceMagnitude, false);
+
+
+				//Update the rotational velocity
+				if (IsUsingMagicFormula)
+				{
+					Tire->UpdateWheelRotationalVelocity(LongitudinalForceMagnitude, TireForce, GetTireRollingResistance(Tire, DeltaTime), LongitudinalVelocity, DeltaTime);
+				}
+				else
+				{
+					Tire->ClampToVehicleWheelSpeed(LongitudinalVelocity, DeltaTime);
+				}
+				if (Tire->IsFrontTire)
+				{
+					float EffectiveWheelRadius = Tire->GetRollingRadius();
+					GEngine->AddOnScreenDebugMessage(21, 3.f, FColor::Green, FString::Printf(TEXT("Torque: %f Ncm"), GetTireDriveForce(Tire) - TireForce - GetTireRollingResistance(Tire, DeltaTime) - GetUnSignedTireBrakingForce(Tire, DeltaTime)));
+					GEngine->AddOnScreenDebugMessage(19, 3.f, FColor::Green, FString::Printf(TEXT("Speed: %f"), LongitudinalVelocity));
+					GEngine->AddOnScreenDebugMessage(20, 3.f, FColor::Green, FString::Printf(TEXT("Anglar: %f"), Tire->GetRotationalVelocity() * EffectiveWheelRadius));
+				}
 				float TireLoad = Tire->TireLoad;
 				if (GEngine)
 					GEngine->AddOnScreenDebugMessage(4 + i, 3.f, FColor::Green,
 						FString::Printf(TEXT("%s's slip: %f rad, slipRatio: %f rad"),
 							*Tire->GetName(), Tire->GetSlipAngle(), Tire->GetSlipRatio()));
-				Tire->ResetForces();
 			}
 		}
 	}
@@ -181,7 +216,6 @@ void AVehicle::Tick(float DeltaTime)
 	//Update the suspension
 	CalculateSuspensionDynamics(DeltaTime, LongitudinalAcceleration, LateralAcceleration);
 
-	float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, PhysicMesh->GetForwardVector() * 0.036));
 	if (GEngine)
 	{
 		float ForwardAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, PhysicMesh->GetForwardVector() * 0.01));
@@ -190,7 +224,6 @@ void AVehicle::Tick(float DeltaTime)
 		GEngine->AddOnScreenDebugMessage(3, 3.f, FColor::Green, FString::Printf(TEXT("Weight %f N"), CurrentPresets.VehicleSprungMass * Gravity));
 		GEngine->AddOnScreenDebugMessage(4, 3.f, FColor::Green, FString::Printf(TEXT("Gear: %i"), GearIndex));
 	}
-
 }
 void AVehicle::SuspensionRayCast()
 {
@@ -447,16 +480,6 @@ void AVehicle::CalculateResistiveForces(FVector Velocity, float DeltaTime)
 	CurrentDrag = 0.0f;
 	GEngine->AddOnScreenDebugMessage(26, 3.f, FColor::Green, FString::Printf(TEXT("Drag %f N"), DragForce.Size()));
 	CurrentDrag = DragForce.Size();
-
-	//Calculate the rolling resistance
-	for (UTire* Tire : AllTires)
-	{
-		if (Tire && Tire->IsGrounded)
-		{
-			float TireRollingResistance = GetTireRollingResistance(Tire, DeltaTime);
-			ApplyWheelForce(Tire, TireRollingResistance, MovementDirection, Tire->IsFrontTire);
-		}
-	}
 }
 
 void AVehicle::CalculatePitchWeightTransfer(const float LongitudinalAcceleration, const float LateralAcceleration)
@@ -586,82 +609,23 @@ void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  Longitudin
 	HeavePosition = FMath::Clamp(HeavePosition, -10.0f, 10.0f);
 }
 
-void AVehicle::UpdateWheel(UTire* Tire, float DeltaTime)
+void AVehicle::UpdateWheel(UTire* Tire, const float LongitudinalForceMagnitude, const float LateralForceMagnitude, float DeltaTime)
 {
 	FVector SocketLocation = SkeletalMesh->GetSocketLocation(Tire->SocketName);
 	//Get the lateral and longitudinal directions of the wheel
 	FVector WheelForward = Tire->GetForwardVector();
 	FVector WheelRight = FVector::CrossProduct(PhysicMesh->GetUpVector(), WheelForward);
 	//Get the wheel's velocity
-	FVector VelocityAtWheel = PhysicMesh->GetPhysicsLinearVelocityAtPoint(PhysicMesh->GetCenterOfMass());
+	FVector VelocityAtWheel = PhysicMesh->GetPhysicsLinearVelocityAtPoint(SocketLocation);
 	//Calculate the lateral and longitudinal speed of the wheel
 	float  LongitudinalVelocity = FVector::DotProduct(VelocityAtWheel, WheelForward);
 	float LateralVelocity = FVector::DotProduct(VelocityAtWheel, WheelRight);
 	//Update the steering of the wheel and its rotational velocity
 	Tire->UpdateSteering(CurrentSteeringAngle);
-	float Direction = FMath::Sign(FVector::DotProduct(CurrentVelocity, GetActorForwardVector()));
-
 
 	//Update the slip angle and ratio 
 	Tire->UpdateSlipAngle(LongitudinalVelocity, LateralVelocity);
-	float ForwardVelocity = FMath::Abs(FVector::DotProduct(
-		PhysicMesh->GetPhysicsLinearVelocity(),
-		PhysicMesh->GetForwardVector()
-	)) * 0.036f;
-
-	//Determine how the traction should be calculated
-	bool ShouldUseFormula = ForwardVelocity > FormulaThreshold;
-
-	//Calculate the lateral friction force
-	FVector LateralFriction = Tire->GetLateralForceVector();
-
-	const float LateralMagnitude = Tire->GetLateralForceVector().Size();
-	const float TireForce = Tire->GetLongitudinalForce(GetTireDriveForce(Tire), LateralMagnitude, false, ShouldUseFormula);
-
-
-
-	//Apply friction circle for longitudinal dominated motion
-	if (IsLongitudinalControlled)
-	{
-		float LongitudinalForce = Tire->GetCurrentLongitudinalForceOnTire();
-		float LateralForceMag = LateralFriction.Size();
-
-		// Apply friction circle limiting
-		float LimitedLateralForce = Tire->FrictionCircle(LongitudinalForce, LateralForceMag, true);
-
-		// Scale the lateral force vector to the limited magnitude
-		if (LateralFriction.Size() > KINDA_SMALL_NUMBER)
-		{
-			LateralFriction = LateralFriction.GetSafeNormal() * LimitedLateralForce;
-		}
-	}
-
-	ApplyLocationForce(LateralFriction, Tire->GetContactPoint(), true);
-
-
-	//3) Chassis: the SAME force at the contact patch. This replaces applying
-	//   TireTraction / braking / rolling-resistance forces to the body directly
-	ApplyWheelForce(Tire, TireForce, WheelForward, false);
-	//Update the rotational velocity
-	if (ShouldUseFormula)
-
-	{
-		Tire->UpdateWheelRotationalVelocity(GetTireDriveForce(Tire), TireForce, GetTireRollingResistance(Tire, DeltaTime) + GetTireBrakingForce(Tire, DeltaTime), Direction, DeltaTime);
-	}
-	else
-	{
-		Tire->ClampToVehicleWheelSpeed(LongitudinalVelocity);
-	}
-
 	Tire->UpdateSlipRatio(LongitudinalVelocity, IsBraking);
-	if (Tire->IsFrontTire)
-	{
-		float EffectiveWheelRadius = Tire->GetRollingRadius();
-		GEngine->AddOnScreenDebugMessage(21, 3.f, FColor::Green, FString::Printf(TEXT("Torque: %f Ncm"), GetTireDriveForce(Tire) - TireForce - GetTireRollingResistance(Tire, DeltaTime) - GetTireBrakingForce(Tire, DeltaTime)));
-		GEngine->AddOnScreenDebugMessage(19, 3.f, FColor::Green, FString::Printf(TEXT("Speed: %f"), LongitudinalVelocity));
-		GEngine->AddOnScreenDebugMessage(20, 3.f, FColor::Green, FString::Printf(TEXT("Anglar: %f"), Tire->GetRotationalVelocity() * EffectiveWheelRadius));
-	}
-
 }
 
 void AVehicle::ApplySuspensionForceEffects()
@@ -728,13 +692,13 @@ float AVehicle::GetTireDriveForce(UTire* Tire)
 {
 	if (Tire->IsFrontTire)
 	{
-		float TireDriveForce = GetDriveForce(GetWheelTorque(Tire));
-		return TireDriveForce * CurrentThrottle;
+
+		return GetDriveForce(GetWheelTorque(Tire)) * CurrentThrottle;
 	}
 	return 0;
 }
 
-float AVehicle::GetTireBrakingForce(UTire* Tire, float DeltaTime)
+float AVehicle::GetUnSignedTireBrakingForce(UTire* Tire, float DeltaTime)
 {
 	float SlipRatio = Tire->GetSlipRatio();
 	// Limit Braking force by tire load and friction
@@ -742,7 +706,7 @@ float AVehicle::GetTireBrakingForce(UTire* Tire, float DeltaTime)
 	// Calculate braking force from slip ratio 
 	float MaxBrakingForce = FMath::Abs(Tire->MagicFormula(TireGrip, SlipRatio, WHEELMODE::BRAKING));
 
-	return GetMinimumWheelForce(Tire, MaxBrakingForce, DeltaTime) * CurrentBrake;
+	return Tire->GetBrakingForce()* CurrentBrake;
 }
 
 float AVehicle::GetTireRollingResistance(UTire* Tire, float DeltaTime)
