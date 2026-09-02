@@ -132,13 +132,14 @@ void UTire::UpdateTireLoad(float NewWeight)
 void UTire::UpdateSlipRatio(const float VehicleSpeedAtWheel, const bool IsBraking)
 {
 	float WheelSurfaceSpeed = WheelRotationalVelocity * SuspensionSettings.WheelRadius;
-	float Denominator = FMath::Abs(IsBraking ? VehicleSpeedAtWheel : WheelSurfaceSpeed);
+	float Denominator = FMath::Abs(IsBraking ? VehicleSpeedAtWheel : VehicleSpeedAtWheel);
 	SlipRatio = FMath::Abs(Denominator) > 0.1f ? (WheelSurfaceSpeed - VehicleSpeedAtWheel) / Denominator : 0;
 }
 
 void UTire::UpdateSlipAngle(const float LongitudinalVelocity, const float LateralVelocity)
 {
-	SlipAngle = FMath::Abs(LongitudinalVelocity) < 50.0f ? 0 : FMath::Atan2(LateralVelocity, LongitudinalVelocity);
+	const float SpeedSq = FMath::Square(LongitudinalVelocity) + FMath::Square(LateralVelocity);
+	SlipAngle = SpeedSq < FMath::Square(50.0f) ? 0 : FMath::Atan2(LateralVelocity, FMath::Abs(LongitudinalVelocity));
 }
 void UTire::UpdateRollingRadius(FVector AxisPosition)
 {
@@ -208,7 +209,7 @@ float UTire::GetNormalForce() const
 	return IsGrounded ? TireLoad : 0;
 }
 
-void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude, const float TireForce, const float ResistiveForce,const float GroundSpeed, const float DeltaTime)
+void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude, const float TireForce, const float ResistiveForce, const float GroundSpeed, const float DeltaTime)
 {
 	float Radius = SuspensionSettings.WheelRadius;
 	if (DeltaTime != 0)
@@ -217,7 +218,7 @@ void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude
 		if (!IsGrounded)
 		{
 			WheelRotationalVelocity *= FMath::Pow(WheelDamper, DeltaTime);
-			return ;
+			return;
 		}
 		float RotationSign = WheelRotationalVelocity >= 0 ? 1 : -1;
 		if (Inertia != 0 && Radius != 0)
@@ -233,11 +234,11 @@ void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude
 			//based on the wheel's ground speed and surface speed
 			const float SurfaceSpeed = WheelRotationalVelocity * Radius;
 			const float SpeedScale = FMath::Max3(FMath::Abs(SurfaceSpeed), FMath::Abs(GroundSpeed), 10.0f);
-			const float MaxSurfaceSpeedChange = 0.05 * DeltaTime * SpeedScale; 
+			const float MaxSurfaceSpeedChange = 0.05 * DeltaTime * SpeedScale;
 			//Clamp the acceleration based on the maximum velocity change
-			RotationalVelocityPerFrame = FMath::Clamp(RotationalVelocityPerFrame,
-				-MaxSurfaceSpeedChange / Radius, MaxSurfaceSpeedChange / Radius);
-			//Prevent the wheel from swapping directions in a single frame
+		/*	RotationalVelocityPerFrame = FMath::Clamp(RotationalVelocityPerFrame,
+				-MaxSurfaceSpeedChange / Radius, MaxSurfaceSpeedChange / Radius);*/
+				//Prevent the wheel from swapping directions in a single frame
 			RotationalVelocityPerFrame = RotationSign >= 0 ? FMath::Max(RotationalVelocityPerFrame, -WheelRotationalVelocity) : FMath::Min(RotationalVelocityPerFrame, -WheelRotationalVelocity);
 			//Update the rotation velocity with the acceleration
 			if (RotationalVelocityPerFrame != 0)

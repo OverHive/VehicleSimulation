@@ -11,8 +11,7 @@
 #include "Vehicle.generated.h"
 enum Axis { BACK, FRONT };
 
-
-UCLASS()
+UCLASS(BlueprintType, Blueprintable)
 //Note
 class VEHICLESIMULATION_API AVehicle : public APawn
 {
@@ -31,10 +30,19 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	//Applies a preset to the vehicle
-	void SetFromPreset(const float Index);
 
-	// --- Components ---
+	//<----------------------------------------------- Preset variables ------------------------------------>
+	//Applies a preset to the vehicle
+	UFUNCTION(BlueprintCallable, Category = "Preset")
+	void SetFromPreset(const int Index);
+	//The stored presets
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Preset")
+	FVehiclePresets VehicleSettings;
+	//The currently selected preset
+	FCarSettings CurrentPresets;
+	//<----------------------------------------------- End ------------------------------------------------->
+	
+	//<----------------------------------------------- Mesh ------------------------------------------------>
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class USkeletalMeshComponent* SkeletalMesh;
 
@@ -43,7 +51,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class  UStaticMeshComponent* VisualMesh;
-	//Input Assets
+	//<----------------------------------------------- End ------------------------------------------------->
+
+	//<----------------------------------------------- Input Assets ---------------------------------------->
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputMappingContext* VehicleMappingContext;
 
@@ -61,6 +71,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* DebugAction;
+	//<----------------------------------------------- End ------------------------------------------------->
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float AirDensity = 1.20;
@@ -122,7 +133,7 @@ private:
 	//Applies suspension forces to the vehicle
 	void ApplySuspensionForceEffects();
 	//Apply a force through a wheel
-	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction, bool IsForward);
+	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction);
 	//Applies a force at location
 	void ApplyLocationForce(FVector Force, FVector Position, bool HasPitch = false);
 	//Obtains the static distribution of the vehicle's weight
@@ -201,9 +212,7 @@ private:
 
 	//For preventing multiple gear changes a single press 
 	bool IsGearChanging = false;
-	//
-	CarSettings CurrentPresets;
-	VehiclePresets VehicleSettings;
+
 	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
 
 };
