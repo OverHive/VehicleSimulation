@@ -198,7 +198,7 @@ float UTire::CalculateSuspensionForce(const float SuspensionVelocity)
 	//The tire also acts like a spring when compressed due to its pressure
 	float TireSpring = TireCompression * SuspensionSettings.TireVerticalStiffness;
 	// Total Force = Spring force + Tire spring force  - Damping (Damping opposes the velocity)
-	SuspensionForce = SpringForce + TireSpring + DampingForce;
+	SuspensionForce = SpringForce +  DampingForce;
 	//Clamp the total force to prevent negative values 
 	SuspensionForce = FMath::Max(0.0f, SuspensionForce);
 	return IsGrounded ? SuspensionForce : 0;

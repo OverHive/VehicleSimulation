@@ -36,7 +36,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Preset")
 	void SetFromPreset(const int Index);
 	//The stored presets
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Preset")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Preset")
 	FVehiclePresets VehicleSettings;
 	//The currently selected preset
 	FCarSettings CurrentPresets;
@@ -190,7 +190,7 @@ private:
 	float FrontUnsprungForce = 0.0f;
 	float RearUnsprungForce = 0.0f;
 	float CurrentDrivingForce = 0.0f;
-	float CurrentDrag = 0.0f;
+	float SumOfResistiveForces = 0.0f;
 	float PitchAngle = 0.0f;
 	float PitchVelocity = 0.0f;
 	float HeavePosition = 0.0f;
@@ -204,6 +204,7 @@ private:
 
 
 	float TargetHeight = 30.0f;
+	float GroundOffset = 13.5f;
 
 	float SpringStiffness = 5000.0f;
 

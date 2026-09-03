@@ -14,7 +14,7 @@ struct VEHICLESIMULATION_API FCarSettings
 	GENERATED_BODY()
 	FCarSettings() {};
 	//|---------------------------------Vehicle class -----------------------------|
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "VehicleName")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VehicleName")
 	FName VehicleName = "preset";
 	float TotalVehicleMass = 10.f;
 	//|---------------------------------Vehicle dimensions and mass ------------------------|

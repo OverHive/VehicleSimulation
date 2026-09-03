@@ -220,7 +220,7 @@ void AVehicle::SuspensionRayCast()
 		//Get the Wheel and its corresponding ray
 		const FWheelSuspensionSetting& Wheel = Tire->SuspensionSettings;
 		FVector StartLocation = SkeletalMesh->GetSocketLocation(Tire->SocketName);
-		FVector EndLocation = StartLocation + (RayDirection * (Wheel.SuspensionLength + Wheel.WheelRadius + 1));
+		FVector EndLocation = StartLocation + (RayDirection * (Wheel.SuspensionLength + Wheel.WheelRadius));
 
 		FHitResult Hit;
 		FCollisionQueryParams QueryParameters;
@@ -232,11 +232,11 @@ void AVehicle::SuspensionRayCast()
 		{
 			//Calculate compression using distance from mount point to the ground hit point
 			float CurrentDistance = RoundToDecimalPoint(FVector::Dist(StartLocation, Hit.Location));
-			CurrentDistance = FMath::Min(CurrentDistance, Wheel.SuspensionLength);
-			float Error = Wheel.WheelRadius - CurrentDistance;
+			CurrentDistance = FMath::Min(CurrentDistance, Wheel.SuspensionLength) ;
+			float Error = TargetHeight - CurrentDistance ;
 
 			//Get the compression of the wheel
-			float Compression = Tire->GetCompression(TargetHeight - CurrentDistance);
+			float Compression = Tire->GetCompression(TargetHeight - CurrentDistance - GroundOffset);
 
 			Tire->IsGrounded = true;
 
@@ -266,6 +266,8 @@ void AVehicle::SuspensionRayCast()
 				float Friction = PhysMat->Friction;
 				Tire->UpdateFrictionCoefficient(Friction);
 			}
+			GEngine->AddOnScreenDebugMessage(26 +i, 3.f, FColor::Green, FString::Printf(TEXT("Distance: %f N"), Error));
+			i++;
 			//Apply the suspension to the model
 			ApplyLocationForce(FVector(0, 0, ForceZ), Tire->GetContactPoint());
 		}
@@ -337,6 +339,7 @@ void AVehicle::SetFromPreset(const int Index)
 		PhysicMesh->SetWorldScale3D(NewScale);
 		VisualMesh->SetWorldScale3D(NewScale);
 		SkeletalMesh->SetWorldScale3D(NewScale);
+		MaxSuspensionLength = CurrentPresets.Height*0.625;
 	}
 	UpdateStaticLoads();
 	CreateTires();
@@ -458,15 +461,14 @@ void AVehicle::CalculateResistiveForces(FVector Velocity, float DeltaTime)
 	DragForce *= 100;
 	//Apply drag
 	PhysicMesh->AddForce(DragForce, NAME_None, false);
-	CurrentDrag = 0.0f;
-	GEngine->AddOnScreenDebugMessage(26, 3.f, FColor::Green, FString::Printf(TEXT("Drag %f N"), DragForce.Size()));
-	CurrentDrag = DragForce.Size();
+	SumOfResistiveForces = 0.0f;
+	SumOfResistiveForces = DragForce.Size();
 
 	for (UTire*& Tire : AllTires)
 	{
 		float RollingResistance = GetTireRollingResistance(Tire, DeltaTime);
 		ApplyWheelForce(Tire,RollingResistance,-Tire->GetForwardVector());
-		CurrentDrag += RollingResistance;
+		SumOfResistiveForces += RollingResistance;
 	}
 }
 
@@ -554,10 +556,10 @@ void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  Longitudin
 
 
 	float WeightTransferMoment = CurrentPresets.VehicleSprungMass * LongitudinalAcceleration * CurrentPresets.CentreOfGravityHeight;
-	PitchMoment += WeightTransferMoment;
+	//PitchMoment += WeightTransferMoment;
 
 	float PitchRestoringMoment = -(CurrentPresets.PitchStiffness + CurrentPresets.VehicleSprungMass * Gravity * CurrentPresets.CentreOfGravityHeight) * FMath::Sin(PitchAngle);
-	GEngine->AddOnScreenDebugMessage(11, 3.f, FColor::Green, FString::Printf(TEXT("Restoring: %i"), abs(PitchRestoringMoment) > abs(PitchMoment)));
+	GEngine->AddOnScreenDebugMessage(11, 3.f, FColor::Green, FString::Printf(TEXT("Restoring: %f"),PitchMoment));
 	PitchMoment += PitchRestoringMoment;
 	// Add pitch damping to prevent oscillation
 	float PitchDampingTorque = -CurrentPresets.PitchDamping * PitchVelocity;
