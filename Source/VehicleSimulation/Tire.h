@@ -11,7 +11,7 @@
 #include "Tire.generated.h"
 
 //For selecting the appropriate factors for Magic formula based on the action of the wheel
-static enum WHEELMODE { ACCELERATION = 0, BRAKING = 1, CORNERING = 2 };
+static enum  WHEELMODE { ACCELERATION = 0, BRAKING = 1, CORNERING = 2 };
 static float Gravity = 980.0f;
 static FVector GetMeshDimensions(UStaticMeshComponent* MeshComponent)
 {
@@ -64,8 +64,10 @@ public:
 	float FrictionCircle(const float LongitudinalForce, const float LaterialForce, const bool LongitudinalLeading) const;
 	//Get the inertia of the wheels
 	float GetWheelInertia() const { return Inertia; };
-	//Returns longitudinal force that acts on the tires based on the drive force 
-	float GetTireReactionForce(const float LateralForceMagnitude, const bool IsLongitudinalLeading) const;
+	//Calculates the peak slips values
+	float CalculatePeakSlip(const int Index) const;
+	//Returns peak slip values
+	float GetPeakSlips(const int Index);
 	//Returns the lateral force on the tire
 	FVector GetLateralForceVector() const;
 	//Update the frictional coefficient of the tire
@@ -79,7 +81,7 @@ public:
 	//Calculates the maximum load the tire can bear
 	void UpdateMaxGrip();
 	//Updates the rotational velocity of the wheel
-	void UpdateWheelRotationalVelocity(const float DriveForce, const float TireForce, const float ResistiveForce, const float GroundSpeed, const float DeltaTime);
+	void UpdateWheelRotationalVelocity(const float DriveForce,const float ResistiveForce, const float GroundSpeed, const float DeltaTime);
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
 	//Store the contact location of the tire
@@ -130,7 +132,8 @@ public:
 	float RollingResistanceCoefficient = 0.015f;
 	FName SocketName;
 	FWheelSuspensionSetting SuspensionSettings = FWheelSuspensionSetting();
-
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
+	TArray<float> PeakSlips;
 	float TireLoad = 0;
 	bool IsGrounded = false;
 private:
@@ -145,6 +148,7 @@ private:
 	float TireGrip = 1.4f;
 	float SlipRatio = 0.0;
 	float SlipAngle = 0.0;
+	
 
 	float MaxGrip = 0.5;
 	float WheelDamper = 0.98f;

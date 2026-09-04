@@ -10,6 +10,10 @@
 // Sets default values
 AVehicle::AVehicle()
 {
+	if (GetWorld())
+	{
+		Gravity = FMath::Abs(GetWorld()->GetGravityZ());
+	}
 	//Create the presets
 	VehicleSettings = FVehiclePresets();
 	//Initialise the tire loads
@@ -136,7 +140,7 @@ void AVehicle::Tick(float DeltaTime)
 				float LongitudinalForce = 0;
 
 				//---------------------------Handles longitudinal forces --------------------
-				LongitudinalForce += GetTireDriveForce(Tire) - GetUnSignedTireBrakingForce(Tire,DeltaTime) * FMath::Sign(SpeedAtWheel);
+				LongitudinalForce += GetTireDriveForce(Tire) - GetUnSignedTireBrakingForce(Tire, DeltaTime) * FMath::Sign(SpeedAtWheel);
 
 				//Apply friction circle for lateral dominated motion
 				if (!IsLongitudinalControlled)
@@ -202,7 +206,7 @@ void AVehicle::Tick(float DeltaTime)
 		float ForwardAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, PhysicMesh->GetForwardVector() * 0.01));
 		GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Green, FString::Printf(TEXT("Speed %f km/h"), ForwardVelocity));
 		GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Green, FString::Printf(TEXT("Acceleration %f m/s^2"), ForwardAcceleration));
-		GEngine->AddOnScreenDebugMessage(3, 3.f, FColor::Green, FString::Printf(TEXT("Weight %f N"), CurrentPresets.VehicleSprungMass * Gravity));
+		GEngine->AddOnScreenDebugMessage(3, 3.f, FColor::Green, FString::Printf(TEXT("Weight %f N"), CurrentPresets.TotalVehicleMass * Gravity));
 		GEngine->AddOnScreenDebugMessage(4, 3.f, FColor::Green, FString::Printf(TEXT("Gear: %i"), GearIndex));
 	}
 }
@@ -232,11 +236,11 @@ void AVehicle::SuspensionRayCast()
 		{
 			//Calculate compression using distance from mount point to the ground hit point
 			float CurrentDistance = RoundToDecimalPoint(FVector::Dist(StartLocation, Hit.Location));
-			CurrentDistance = FMath::Min(CurrentDistance, Wheel.SuspensionLength) ;
-			float Error = TargetHeight - CurrentDistance ;
+			CurrentDistance = FMath::Min(CurrentDistance, Wheel.SuspensionLength);
+			float Error = FMath::FGenericPlatformMath::Max(TargetHeight - CurrentDistance, 0);
 
 			//Get the compression of the wheel
-			float Compression = Tire->GetCompression(TargetHeight - CurrentDistance - GroundOffset);
+			float Compression = Tire->GetCompression(Error - GroundOffset);
 
 			Tire->IsGrounded = true;
 
@@ -266,8 +270,6 @@ void AVehicle::SuspensionRayCast()
 				float Friction = PhysMat->Friction;
 				Tire->UpdateFrictionCoefficient(Friction);
 			}
-			GEngine->AddOnScreenDebugMessage(26 +i, 3.f, FColor::Green, FString::Printf(TEXT("Distance: %f N"), Error));
-			i++;
 			//Apply the suspension to the model
 			ApplyLocationForce(FVector(0, 0, ForceZ), Tire->GetContactPoint());
 		}
@@ -327,9 +329,12 @@ void AVehicle::SetFromPreset(const int Index)
 	//Apply the settings
 	GearIndex = 0;
 	GearRatio = CurrentPresets.GearRatios[0];
-	Damping = CurrentPresets.VehicleSprungMass * 5;
-	SpringStiffness = CurrentPresets.VehicleSprungMass * 50;
+	Damping = CurrentPresets.TotalVehicleMass * 5;
 	PhysicMesh->SetMassOverrideInKg(NAME_None, CurrentPresets.TotalVehicleMass, true);
+	TargetHeight = CurrentPresets.RearWheelRadius;
+	SpringStiffness = CurrentPresets.TotalVehicleMass * 50;
+	GroundOffset = CurrentPresets.TotalVehicleMass*Gravity/(4*SpringStiffness);
+
 	if (MeshDimension.X != 0 && MeshDimension.Y != 0 && MeshDimension.Z != 0)
 	{
 		FVector NewScale = FVector(
@@ -339,8 +344,9 @@ void AVehicle::SetFromPreset(const int Index)
 		PhysicMesh->SetWorldScale3D(NewScale);
 		VisualMesh->SetWorldScale3D(NewScale);
 		SkeletalMesh->SetWorldScale3D(NewScale);
-		MaxSuspensionLength = CurrentPresets.Height*0.625;
+		MaxSuspensionLength = CurrentPresets.Height * 0.625;
 	}
+
 	UpdateStaticLoads();
 	CreateTires();
 }
@@ -467,7 +473,7 @@ void AVehicle::CalculateResistiveForces(FVector Velocity, float DeltaTime)
 	for (UTire*& Tire : AllTires)
 	{
 		float RollingResistance = GetTireRollingResistance(Tire, DeltaTime);
-		ApplyWheelForce(Tire,RollingResistance,-Tire->GetForwardVector());
+		ApplyWheelForce(Tire, RollingResistance, -Tire->GetForwardVector());
 		SumOfResistiveForces += RollingResistance;
 	}
 }
@@ -554,12 +560,12 @@ void AVehicle::CalculatePitchAndHeaveDynamics(float DeltaTime, float  Longitudin
 	//Use the suspension forces to obtain the pitch moment
 	float PitchMoment = (FrontUnsprungForce * CurrentPresets.DistanceOfCentreOfGravityToFrontAxis) - (RearUnsprungForce * CurrentPresets.DistanceOfCentreOfGravityToRearAxis);
 
-
+	GEngine->AddOnScreenDebugMessage(11, 3.f, FColor::Green, FString::Printf(TEXT("Defualt pitch: %f N"), PitchMoment));
 	float WeightTransferMoment = CurrentPresets.VehicleSprungMass * LongitudinalAcceleration * CurrentPresets.CentreOfGravityHeight;
-	//PitchMoment += WeightTransferMoment;
+	PitchMoment += WeightTransferMoment;
 
 	float PitchRestoringMoment = -(CurrentPresets.PitchStiffness + CurrentPresets.VehicleSprungMass * Gravity * CurrentPresets.CentreOfGravityHeight) * FMath::Sin(PitchAngle);
-	GEngine->AddOnScreenDebugMessage(11, 3.f, FColor::Green, FString::Printf(TEXT("Restoring: %f"),PitchMoment));
+	GEngine->AddOnScreenDebugMessage(12, 3.f, FColor::Green, FString::Printf(TEXT("Restoring: %f"), PitchMoment));
 	PitchMoment += PitchRestoringMoment;
 	// Add pitch damping to prevent oscillation
 	float PitchDampingTorque = -CurrentPresets.PitchDamping * PitchVelocity;
@@ -617,23 +623,21 @@ void AVehicle::UpdateWheel(UTire* Tire, const float LongitudinalForceMagnitude, 
 	Tire->UpdateSlipAngle(LongitudinalVelocity, LateralVelocity);
 	Tire->UpdateSlipRatio(LongitudinalVelocity, IsBraking);
 
-	//Calculate the tire reaction force
-	const float TireForce = Tire->GetTireReactionForce(LateralForceMagnitude, false);
 
 
 	//Update the rotational velocity
 	if (IsUsingMagicFormula)
 	{
-		Tire->UpdateWheelRotationalVelocity(GetDriveForce(GetWheelTorque(Tire)), LongitudinalForceMagnitude, GetUnSignedTireBrakingForce(Tire, DeltaTime), LongitudinalVelocity, DeltaTime);
+		Tire->UpdateWheelRotationalVelocity(LongitudinalForceMagnitude, GetUnSignedTireBrakingForce(Tire, DeltaTime), LongitudinalVelocity, DeltaTime);
 	}
 	else
 	{
-		Tire->ClampToVehicleWheelSpeed(LongitudinalVelocity * 1.11, DeltaTime);
+		Tire->ClampToVehicleWheelSpeed(LongitudinalVelocity, DeltaTime);
 	}
 	if (Tire->IsFrontTire)
 	{
 		float EffectiveWheelRadius = Tire->GetRollingRadius();
-		GEngine->AddOnScreenDebugMessage(21, 3.f, FColor::Green, FString::Printf(TEXT("Torque: %f Ncm"), GetTireDriveForce(Tire) - TireForce - GetTireRollingResistance(Tire, DeltaTime) - GetUnSignedTireBrakingForce(Tire, DeltaTime)));
+		GEngine->AddOnScreenDebugMessage(21, 3.f, FColor::Green, FString::Printf(TEXT("Torque: %f Ncm"), GetTireDriveForce(Tire) - GetTireRollingResistance(Tire, DeltaTime) - GetUnSignedTireBrakingForce(Tire, DeltaTime)));
 		GEngine->AddOnScreenDebugMessage(19, 3.f, FColor::Green, FString::Printf(TEXT("Speed: %f"), LongitudinalVelocity));
 		GEngine->AddOnScreenDebugMessage(20, 3.f, FColor::Green, FString::Printf(TEXT("Anglar: %f"), Tire->GetRotationalVelocity() * EffectiveWheelRadius));
 	}
@@ -703,10 +707,10 @@ float AVehicle::GetTireDriveForce(UTire* Tire)
 {
 	if (Tire->IsFrontTire)
 	{
-		float DriveForce = GetDriveForce(GetWheelTorque(Tire)) ;
+		float DriveForce = GetDriveForce(GetWheelTorque(Tire));
 		if (IsUsingMagicFormula)
 		{
-			Tire->MagicFormula(DriveForce,Tire->GetSlipRatio(),WHEELMODE::ACCELERATION);
+			Tire->MagicFormula(DriveForce, Tire->GetPeakSlips(WHEELMODE::ACCELERATION), WHEELMODE::ACCELERATION);
 		}
 		return DriveForce;
 	}
@@ -721,7 +725,7 @@ float AVehicle::GetUnSignedTireBrakingForce(UTire* Tire, float DeltaTime)
 	// Calculate braking force from slip ratio 
 	float MaxBrakingForce = FMath::Abs(Tire->MagicFormula(TireGrip, SlipRatio, WHEELMODE::BRAKING));
 
-	return Tire->GetBrakingForce()* CurrentBrake;
+	return Tire->GetBrakingForce() * CurrentBrake;
 }
 
 float AVehicle::GetTireRollingResistance(UTire* Tire, float DeltaTime)

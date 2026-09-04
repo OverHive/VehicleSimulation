@@ -49,20 +49,36 @@ float UTire::FrictionCircle(const float LongitudinalForce, const float LateralFo
 	return MaxForce > 0 ? FMath::Sign(SelectedForce) * FMath::Min(FMath::Sqrt(MaxForce), FMath::Abs(SelectedForce)) : 0;
 
 }
-
-float UTire::GetTireReactionForce(const float LateralForceMagnitude, const bool IsLongitudinalLeading) const
+float UTire::CalculatePeakSlip(const int Index) const
 {
-	//Ignore for grounded wheels
-	if (!IsGrounded)
+	const int i = FMath::Clamp(Index, 0, 2);
+	const float B = StiffnessFactors[i];
+	const float C = ShapeFactors[i];
+	const float E = CurvatureFactors[i];
+
+	// C <= 1 never reaches the sine's peak at finite slip
+	if (B <= 0.0f || C <= 1.0f) return 0.0f;
+
+	const float Target = FMath::Tan(0.5f * PI / C);
+
+	// Seed with the E = 0 solution, then Newton–Raphson
+	float X = Target / B;
+	for (int Iter = 0; Iter < 6; ++Iter)
 	{
-		return 0.0f;
+		const float F = B * X * (1.0f - E) + E * FMath::Atan(B * X) - Target;
+		const float dF = B * (1.0f - E) + E * B / (1.0f + FMath::Square(B * X));
+		X -= F / dF;
 	}
-	//Select mode based on slip ratio(breaking mode for negative slip ratios, acceleration mode for positive slip)
-	const int Mode = SlipRatio >= 0.0f ? WHEELMODE::ACCELERATION : WHEELMODE::BRAKING;
-	//Calculate the force based on the Magic formula
-	float RawLongitudinalForce = MagicFormula(MaxGrip, SlipRatio, Mode);
-	//Limit by friction circle
-	return FrictionCircle(RawLongitudinalForce, LateralForceMagnitude, false);
+	return X;
+}
+
+float UTire::GetPeakSlips(const int Index)
+{
+	if (Index == 0 && Index < PeakSlips.Num())
+	{
+		return PeakSlips[Index];
+	}
+	return 0.0f;
 }
 
 FVector UTire::GetLateralForceVector() const
@@ -153,6 +169,12 @@ void UTire::UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const T
 	StiffnessFactors = NewStiffnessFactors;
 	ShapeFactors = NewShapeFactors;
 	CurvatureFactors = NewCurvatureFactors;
+	//Get the new slips peaks
+	PeakSlips.Empty();
+	for (int i = WHEELMODE::ACCELERATION; i <= WHEELMODE::CORNERING; i++)
+	{
+		PeakSlips.Add(CalculatePeakSlip(i));
+	}
 }
 
 void UTire::ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTime)
@@ -198,7 +220,7 @@ float UTire::CalculateSuspensionForce(const float SuspensionVelocity)
 	//The tire also acts like a spring when compressed due to its pressure
 	float TireSpring = TireCompression * SuspensionSettings.TireVerticalStiffness;
 	// Total Force = Spring force + Tire spring force  - Damping (Damping opposes the velocity)
-	SuspensionForce = SpringForce +  DampingForce;
+	SuspensionForce = SpringForce + DampingForce;
 	//Clamp the total force to prevent negative values 
 	SuspensionForce = FMath::Max(0.0f, SuspensionForce);
 	return IsGrounded ? SuspensionForce : 0;
@@ -209,7 +231,7 @@ float UTire::GetNormalForce() const
 	return IsGrounded ? TireLoad : 0;
 }
 
-void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude, const float TireForce, const float ResistiveForce, const float GroundSpeed, const float DeltaTime)
+void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude, const float ResistiveForce, const float GroundSpeed, const float DeltaTime)
 {
 	float Radius = SuspensionSettings.WheelRadius;
 	if (DeltaTime != 0)
@@ -224,7 +246,7 @@ void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude
 		if (Inertia != 0 && Radius != 0)
 		{
 			//Calculate the net force on the wheel
-			const float NetForce = LongitudinalForceMagnitude - TireForce - RotationSign * ResistiveForce;
+			const float NetForce = LongitudinalForceMagnitude - RotationSign * ResistiveForce;
 			//Convert the force in to a torque
 			float NetTorque = NetForce * Radius;
 
@@ -236,9 +258,9 @@ void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude
 			const float SpeedScale = FMath::Max3(FMath::Abs(SurfaceSpeed), FMath::Abs(GroundSpeed), 10.0f);
 			const float MaxSurfaceSpeedChange = 0.05 * DeltaTime * SpeedScale;
 			//Clamp the acceleration based on the maximum velocity change
-		/*	RotationalVelocityPerFrame = FMath::Clamp(RotationalVelocityPerFrame,
-				-MaxSurfaceSpeedChange / Radius, MaxSurfaceSpeedChange / Radius);*/
-				//Prevent the wheel from swapping directions in a single frame
+			RotationalVelocityPerFrame = FMath::Clamp(RotationalVelocityPerFrame,
+				-MaxSurfaceSpeedChange / Radius, MaxSurfaceSpeedChange / Radius);
+			//Prevent the wheel from swapping directions in a single frame
 			RotationalVelocityPerFrame = RotationSign >= 0 ? FMath::Max(RotationalVelocityPerFrame, -WheelRotationalVelocity) : FMath::Min(RotationalVelocityPerFrame, -WheelRotationalVelocity);
 			//Update the rotation velocity with the acceleration
 			if (RotationalVelocityPerFrame != 0)

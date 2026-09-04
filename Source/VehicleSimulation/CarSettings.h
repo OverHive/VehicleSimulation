@@ -99,12 +99,12 @@ struct VEHICLESIMULATION_API FCarSettings
 		MaxRPM = NewMaximumRPM;
 		FrontRollingResistanceCoefficient = NewFrontRollingResistanceCoefficient;
 		RearRollingResistanceCoefficient = NewRearRollingResistanceCoefficient;
-		PitchStiffness = NewPitchStiffness;
+
 		FrontSuspensionDamping = NewFrontSuspensionDamping;
 		RearSuspensionDamping = NewRearSuspensionDamping;
 		FrontUnSprungDamping = NewFrontUnSprungDamping;
 		RearUnSprungDamping = NewRearUnSprungDamping;
-		PitchDamping = NewPitchDamping;
+
 		HeaveDamping = NewHeaveDamping;
 
 		FrontSuspensionStiffness = NewFrontSuspensionStiffness;
@@ -118,6 +118,8 @@ struct VEHICLESIMULATION_API FCarSettings
 
 		//Convert from m^2 to cm^2
 		PitchInertia = NewPitchInertia * 10000;
+		PitchStiffness = NewPitchStiffness * 10000;
+		PitchDamping = NewPitchDamping * 10000;
 		FrontWheelInertia = NewFrontWheelInertia * 10000;
 		RearWheelInertia = NewRearWheelInertia * 10000;
 		FrontBrakeTorque = NewFrontBrakeTorque * 10000;
