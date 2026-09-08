@@ -46,6 +46,7 @@ public:
 	float CalculateSuspensionForce(const float SuspensionVelocity);
 	//Gets the normal force on the tire
 	float GetNormalForce() const;
+	float CalculateRotationalAcceleration(const float CurrentWheelRotationalVelocity,const float LongitudinalForceMagnitude, const float ResistiveForce, const float torque_multiplier, const float GroundSpeed, const float DeltaTime) const;
 	//Gets the current suspension force
 	float GetSuspensionForce() { return IsGrounded ? SuspensionForce : 0; }
 	//Get the wheel's tire load
@@ -81,7 +82,7 @@ public:
 	//Calculates the maximum load the tire can bear
 	void UpdateMaxGrip();
 	//Updates the rotational velocity of the wheel
-	void UpdateWheelRotationalVelocity(const float DriveForce,const float ResistiveForce, const float GroundSpeed, const float DeltaTime);
+	void UpdateWheelRotationalVelocity(const float DriveForce,const float MaxBrakingForce, const float BrakeStrength, const float GroundSpeed, const float DeltaTime);
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
 	//Store the contact location of the tire
@@ -89,7 +90,7 @@ public:
 	//Update the suspension setting of the wheels
 	void UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness, const float UnSprungMass, const float StaticTireLoad);
 	//Updates the tire's slip ratio
-	void UpdateSlipRatio(const float VehicleSpeed, const bool IsBraking);
+	void UpdateSlipRatio(const float CurrentRotationalVelocity,const float VehicleSpeed, const bool IsBraking);
 	//Updates the current tire load
 	void UpdateTireLoad(float NormalForce);
 	//Updates the tire's angle ratio
@@ -104,7 +105,7 @@ public:
 	void UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors);
 	//Gets the wheel's contact point
 	//Handles updating the Rotational velocity when under Magic formula threshold
-	void ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTime);
+	void ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTime, const bool IsBraking);
 	//Gets the dimensions of the tire mesh
 	void StoreTireMeshDimensions();
 	FVector GetContactPoint() const { return ContactPoint; }
@@ -116,7 +117,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	float SteerAngle = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
-	bool IsFrontTire = false;
+	bool IsDriveWheel = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	bool IsRightTire = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")

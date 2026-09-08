@@ -142,6 +142,8 @@ private:
 	float GetDriveForce(float Torque) const;
 	//Gets the traction force on for a wheel
 	float GetTireDriveForce(UTire* Tire);
+	//Calculates the maximun braking force base on the available slip
+	float GetMaximumSlipBasedBreakingForce(UTire* Tire, float DeltaTime);
 	//Gets the absolute braking force for a wheel
 	float GetUnSignedTireBrakingForce(UTire* Tire, float DeltaTime);
 	//Gets the resistive force on a Tire
