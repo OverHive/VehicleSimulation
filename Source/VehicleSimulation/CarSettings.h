@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WheelConfiguration.h"
 #include "CarSettings.generated.h"
 
 /** The class for creating individual vehicle presents
@@ -66,10 +67,14 @@ struct VEHICLESIMULATION_API FCarSettings
 	float CurveStep = 0;
 	TMap <float, float> TorqueCurve;
 	float MaxRPM = 0;
-	//|--------------------------------- Tire features ---------------------------------------|
+	//|--------------------------------- Tire features ----------------------------|
 	TArray<float> StiffnessFactors = { 0.0f,0.0f,0.0f };
 	TArray<float> ShapeFactors = {0.0f,0.0f,0.0f};
 	TArray<float> CurvatureFactors = {0.0f,0.0f,0.0f};
+	//|-------------------------------- End ---------------------------------------|
+
+	//|--------------------------------- Wheel configuration ----------------------|
+	TMap <FName, FWheelConfiguration> SocketToWheelConfigurations;
 	//|-------------------------------- End ---------------------------------------|
 	FCarSettings(const FName NewVehicleName, const float NewVehicleSprungMass, const float NewHeight, const float NewWidth,
 		const float NewDragCoefficient, const float NewWheelBaseLength, const float NewCOFHeight, const float NewFrontAxisToCOF,
@@ -81,7 +86,7 @@ struct VEHICLESIMULATION_API FCarSettings
 		const float NewFrontTireFriction, const float NewRearTireFriction, const float NewHeaveDamping, TMap <float, float> NewTorqueCurve, float const NewCurveStep
 		, const float NewMaximumRPM, const float NewMinimumStartingRPM, const float NewFrontRollingResistanceCoefficient, const float NewRearRollingResistanceCoefficient,
 		const float NewFrontWheelInertia, const float NewRearWheelInertia, const float NewFrontBrakeTorque, const float NewRearBrakeTorque,
-		const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors)
+		const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors, const TMap <FName, FWheelConfiguration> NewWheelConfigurations)
 	{
 		MinimumStartingRPM = NewMinimumStartingRPM;
 		VehicleName = NewVehicleName;
@@ -99,7 +104,7 @@ struct VEHICLESIMULATION_API FCarSettings
 		MaxRPM = NewMaximumRPM;
 		FrontRollingResistanceCoefficient = NewFrontRollingResistanceCoefficient;
 		RearRollingResistanceCoefficient = NewRearRollingResistanceCoefficient;
-
+		SocketToWheelConfigurations = NewWheelConfigurations;
 		FrontSuspensionDamping = NewFrontSuspensionDamping;
 		RearSuspensionDamping = NewRearSuspensionDamping;
 		FrontUnSprungDamping = NewFrontUnSprungDamping;
@@ -124,6 +129,10 @@ struct VEHICLESIMULATION_API FCarSettings
 		RearWheelInertia = NewRearWheelInertia * 10000;
 		FrontBrakeTorque = NewFrontBrakeTorque * 10000;
 		RearBrakeTorque = NewRearBrakeTorque * 10000;
+		for (auto& i : TorqueCurve)
+		{
+			i.Value *= 10000;
+		}
 		//Convert from m to cm
 		FrontWheelRadius = NewFrontWheelRadius * 100;
 		RearWheelRadius = NewRearWheelRadius * 100;
@@ -134,6 +143,11 @@ struct VEHICLESIMULATION_API FCarSettings
 		DistanceOfCentreOfGravityToFrontAxis = NewFrontAxisToCOF * 100;
 		DistanceOfCentreOfGravityToRearAxis = NewRearAxisToCOF * 100;
 		TrackWidth = NewTrackWidth * 100;
+
+		for (auto& i : SocketToWheelConfigurations)
+		{
+			i.Value.Position *= 100;
+		}
 
 		TotalVehicleMass = VehicleSprungMass + 2 * (FrontUnsprungMass + RearUnsprungMass);
 	}

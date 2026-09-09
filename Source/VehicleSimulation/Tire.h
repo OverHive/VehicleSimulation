@@ -8,6 +8,7 @@
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "WheelSuspensionSetting.h"
+#include "WheelConfiguration.h"
 #include "Tire.generated.h"
 
 //For selecting the appropriate factors for Magic formula based on the action of the wheel
@@ -103,24 +104,22 @@ public:
 	void UpdateBrakingTorque(const float NewBrakingTorque) { BrakingTorque = NewBrakingTorque; }
 	//Updates the Magic formula parameters
 	void UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors);
-	//Gets the wheel's contact point
+	//Updates the wheels configuration
+	void UpdateWheelConfiguration(const FWheelConfiguration NewConfig) { WheelConfig = NewConfig; };
 	//Handles updating the Rotational velocity when under Magic formula threshold
 	void ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTime, const bool IsBraking);
-	//Gets the dimensions of the tire mesh
-	void StoreTireMeshDimensions();
+	//Gets the starting dimensions of the tire mesh
+	void StoreInitialTireMeshDimensions();
+	//Gets the wheel's contact point
 	FVector GetContactPoint() const { return ContactPoint; }
 	//Returns the direction of the normal force on the wheel 
 	FVector GetContactNormal() const { return ContacNormal; }
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 	class  UStaticMeshComponent* WheelMesh;
-
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
+	FWheelConfiguration WheelConfig;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	float SteerAngle = 0.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
-	bool IsDriveWheel = false;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
-	bool IsRightTire = false;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	float Inertia = 8500; //Kg/ cm^2
 	//It dictates how quickly the tire builds up grip as slip 
 	TArray<float> StiffnessFactors;
@@ -161,4 +160,5 @@ private:
 	float TireCompression = 0.0f;
 	float SuspensionCompression = 0.0f;
 	FVector WheelMeshDimension = FVector::ZeroVector;
+	FVector WheelPosition = FVector::ZeroVector;
 };

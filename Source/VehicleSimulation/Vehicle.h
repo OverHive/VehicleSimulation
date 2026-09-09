@@ -9,7 +9,6 @@
 #include "WheelSuspensionSetting.h"
 #include "VehiclePresets.h"
 #include "Vehicle.generated.h"
-enum Axis { BACK, FRONT };
 
 UCLASS(BlueprintType, Blueprintable)
 //Note
@@ -110,13 +109,17 @@ public:
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float MaxSuspensionLength = 50.0f;//cm
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
+	float LongitudinalDamping = 5.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
+	float SpringStiffness = 8.0f;
 	FName VehiclePresetName = "Undefined";
 private:
 	//Models vehicle suspension using ray cast
 	void SuspensionRayCast();
 	// This function is called by the Enhanced Input System
 	void Move(const FInputActionValue& Value);
-	//Setup for the tires
+	//Setup for the wheels
 	void CreateTires();
 	//Handles the dynamics of the suspension
 	void CalculateSuspensionDynamics(float DeltaTime, float LongitudionalAcceleration, const float LateralAcceleration);
@@ -135,14 +138,14 @@ private:
 	//Apply a force through a wheel
 	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction);
 	//Applies a force at location
-	void ApplyLocationForce(FVector Force, FVector Position, bool HasPitch = false);
+	void ApplyLocationForce(FVector Force, FVector Position, bool HasPitch = false, bool HasRoll = false);
 	//Obtains the static distribution of the vehicle's weight
 	void UpdateStaticLoads();
 	//Get throttle from a engine 
 	float GetDriveForce(float Torque) const;
 	//Gets the traction force on for a wheel
 	float GetTireDriveForce(UTire* Tire);
-	//Calculates the maximun braking force base on the available slip
+	//Calculates the maximum braking force base on the available slip
 	float GetMaximumSlipBasedBreakingForce(UTire* Tire, float DeltaTime);
 	//Gets the absolute braking force for a wheel
 	float GetUnSignedTireBrakingForce(UTire* Tire, float DeltaTime);
@@ -204,18 +207,11 @@ private:
 	bool IsLongitudinalControlled = true;
 
 
-
+	//For model visualising
 	float TargetHeight = 30.0f;
 	float GroundOffset = 13.5f;
-
-	float SpringStiffness = 5000.0f;
-
-	float Damping = 500.0f;
 	FVector MeshDimension = FVector::ZeroVector;
 
 	//For preventing multiple gear changes a single press 
 	bool IsGearChanging = false;
-
-	TArray<FName> socketNames{ "Socket_FR","Socket_FL","Socket_RR","Socket_RL" };
-
 };

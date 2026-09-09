@@ -33,7 +33,4 @@ struct VEHICLESIMULATION_API FWheelSuspensionSetting
     
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float UnSpringMass = 50000.0f;
-
-
-
 };

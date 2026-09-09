@@ -118,9 +118,9 @@ void UTire::UpdateSteering(const float NewAngle)
 {
 
 	//Only allow steering from the front tires
-	SteerAngle = IsDriveWheel ? NewAngle : 0;
+	SteerAngle = WheelConfig.IsSteerWheel ? NewAngle : 0;
 	//Rotate the tire to the new steer angle
-	if (IsDriveWheel)
+	if (WheelConfig.IsSteerWheel)
 	{
 		SetRelativeRotation(FRotator(0.0f, SteerAngle, 0.0f));
 
@@ -191,7 +191,7 @@ void UTire::ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTi
 	UpdateSlipRatio(WheelRotationalVelocity, WheelSpeed, IsBraking);
 }
 
-void UTire::StoreTireMeshDimensions()
+void UTire::StoreInitialTireMeshDimensions()
 {
 	WheelMeshDimension = GetMeshDimensions(WheelMesh);
 }
