@@ -174,6 +174,7 @@ private:
 	FVector LastVelocity = FVector::ZeroVector;
 	FVector Acceleration = FVector::ZeroVector;
 	FVector DefaultVisualMeshPosition = FVector::ZeroVector;
+	FVector MeshScale = FVector(1,1,1);
 	int GearIndex = 0;
 	//Debug configuration
 	float DebugSetting = 0.0f;

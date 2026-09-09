@@ -326,13 +326,13 @@ void AVehicle::SetFromPreset(const int Index)
 
 	if (MeshDimension.X != 0 && MeshDimension.Y != 0 && MeshDimension.Z != 0)
 	{
-		FVector NewScale = FVector(
+		MeshScale = FVector(
 			CurrentPresets.WheelBaseLength / MeshDimension.X,
 			CurrentPresets.Width / MeshDimension.Y,
 			CurrentPresets.Height / MeshDimension.Z);
-		PhysicMesh->SetWorldScale3D(NewScale);
-		VisualMesh->SetWorldScale3D(NewScale);
-		SkeletalMesh->SetWorldScale3D(NewScale);
+		PhysicMesh->SetWorldScale3D(MeshScale);
+		VisualMesh->SetWorldScale3D(MeshScale);
+		SkeletalMesh->SetWorldScale3D(MeshScale);
 		MaxSuspensionLength = CurrentPresets.Height * 0.625;
 	}
 
@@ -422,9 +422,13 @@ void AVehicle::CreateTires()
 			Tire->UpdateWheelFeatures(CurrentPresets.StiffnessFactors, CurrentPresets.ShapeFactors, CurrentPresets.CurvatureFactors);
 			//Store the socket name with wheel
 			Tire->SocketName = SocketNames[i];
-			//Update the 
+			//Update the configuration of the wheel
 			if (CurrentPresets.SocketToWheelConfigurations.Find(SocketNames[i]))
+			{
 				Tire->UpdateWheelConfiguration(CurrentPresets.SocketToWheelConfigurations[SocketNames[i]]);
+				Tire->UpdateWheelWorldPosition(MeshScale);
+			}
+
 		}
 	}
 }

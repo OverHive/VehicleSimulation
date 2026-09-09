@@ -16,12 +16,11 @@ static enum  WHEELMODE { ACCELERATION = 0, BRAKING = 1, CORNERING = 2 };
 static float Gravity = 980.0f;
 static FVector GetMeshDimensions(UStaticMeshComponent* MeshComponent)
 {
-	FVector Origin;
-	FVector BoxExtent;
+	FVector Min, Max;
 	//Get the  bounds of the mesh
-	MeshComponent->GetLocalBounds(Origin, BoxExtent);
+	MeshComponent->GetLocalBounds(Min, Max);
 	//Multiply the bounds to get the size
-	FVector MeshSize = BoxExtent * 2.0f;
+	FVector MeshSize = Max - Min;
 	return MeshSize;
 }
 
@@ -47,7 +46,7 @@ public:
 	float CalculateSuspensionForce(const float SuspensionVelocity);
 	//Gets the normal force on the tire
 	float GetNormalForce() const;
-	float CalculateRotationalAcceleration(const float CurrentWheelRotationalVelocity,const float LongitudinalForceMagnitude, const float ResistiveForce, const float torque_multiplier, const float GroundSpeed, const float DeltaTime) const;
+	float CalculateRotationalAcceleration(const float CurrentWheelRotationalVelocity, const float LongitudinalForceMagnitude, const float ResistiveForce, const float torque_multiplier, const float GroundSpeed, const float DeltaTime) const;
 	//Gets the current suspension force
 	float GetSuspensionForce() { return IsGrounded ? SuspensionForce : 0; }
 	//Get the wheel's tire load
@@ -83,7 +82,7 @@ public:
 	//Calculates the maximum load the tire can bear
 	void UpdateMaxGrip();
 	//Updates the rotational velocity of the wheel
-	void UpdateWheelRotationalVelocity(const float DriveForce,const float MaxBrakingForce, const float BrakeStrength, const float GroundSpeed, const float DeltaTime);
+	void UpdateWheelRotationalVelocity(const float DriveForce, const float MaxBrakingForce, const float BrakeStrength, const float GroundSpeed, const float DeltaTime);
 	//Updates the steering direction of the tire
 	void UpdateSteering(const float NewAngle);
 	//Store the contact location of the tire
@@ -91,7 +90,7 @@ public:
 	//Update the suspension setting of the wheels
 	void UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness, const float UnSprungMass, const float StaticTireLoad);
 	//Updates the tire's slip ratio
-	void UpdateSlipRatio(const float CurrentRotationalVelocity,const float VehicleSpeed, const bool IsBraking);
+	void UpdateSlipRatio(const float CurrentRotationalVelocity, const float VehicleSpeed, const bool IsBraking);
 	//Updates the current tire load
 	void UpdateTireLoad(float NormalForce);
 	//Updates the tire's angle ratio
@@ -106,6 +105,8 @@ public:
 	void UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors);
 	//Updates the wheels configuration
 	void UpdateWheelConfiguration(const FWheelConfiguration NewConfig) { WheelConfig = NewConfig; };
+	// Handles resizing the wheel
+	void UpdateWheelWorldPosition(FVector const MeshScale);
 	//Handles updating the Rotational velocity when under Magic formula threshold
 	void ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTime, const bool IsBraking);
 	//Gets the starting dimensions of the tire mesh
@@ -148,7 +149,7 @@ private:
 	float TireGrip = 1.4f;
 	float SlipRatio = 0.0;
 	float SlipAngle = 0.0;
-	
+
 
 	float MaxGrip = 0.5;
 	float WheelDamper = 0.98f;

@@ -21,7 +21,7 @@ void UTire::UpdateTireRadius(const float Value)
 	{
 		FVector NewScale = FVector(
 			Value / WheelMeshDimension.X,
-			1,
+			0.5,
 			Value / WheelMeshDimension.Z);
 
 		WheelMesh->SetRelativeScale3D(NewScale);
@@ -175,6 +175,12 @@ void UTire::UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const T
 	{
 		PeakSlips.Add(CalculatePeakSlip(i));
 	}
+}
+
+void UTire::UpdateWheelWorldPosition(FVector const MeshScale)
+{
+	SetRelativeLocation(WheelConfig.Position / MeshScale);
+	WheelMesh->SetRelativeLocation(WheelConfig.Position/MeshScale);
 }
 
 void UTire::ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTime, const bool IsBraking)
