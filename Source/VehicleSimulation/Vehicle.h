@@ -150,9 +150,9 @@ private:
 	//Gets the absolute braking force for a wheel
 	float GetUnSignedTireBrakingForce(UTire* Tire, float DeltaTime);
 	//Gets the resistive force on a Tire
-	float GetTireRollingResistance(UTire* Tire, float DeltaTime);
+	float GetTireRollingResistance(UTire* Tire, FVector WheelDirection, float DeltaTime);
 	//Calculates the minimum stopping force on a wheel
-	float GetMinimumWheelForce(UTire* Tire, const float BrakingkingForce, const float DeltaTime);
+	float GetMinimumWheelForce(UTire* Tire, const float BrakingkingForce, FVector WheelDirection, const float DeltaTime);
 	//Rounds a float to a given number of decimal points
 	float RoundToDecimalPoint(const float Value, const int Points = 3);
 	//Gets the current rotations per minute of a give tire

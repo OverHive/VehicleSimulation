@@ -90,7 +90,7 @@ public:
 	//Update the suspension setting of the wheels
 	void UpdateSuspension(const float Stiffness, const float Damping, const float SuspensionLength, const float TireStiffness, const float UnSprungMass, const float StaticTireLoad);
 	//Updates the tire's slip ratio
-	void UpdateSlipRatio(const float CurrentRotationalVelocity, const float VehicleSpeed, const bool IsBraking);
+	void UpdateSlipRatio(const float CurrentRotationalVelocity, const float VehicleSpeedAtWheel, const bool IsBraking);
 	//Updates the current tire load
 	void UpdateTireLoad(float NormalForce);
 	//Updates the tire's angle ratio
@@ -121,7 +121,7 @@ public:
 	FWheelConfiguration WheelConfig;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	float SteerAngle = 0.0f;
-	float Inertia = 8500; //Kg/ cm^2
+	float Inertia = 8500; //Kg cm^2
 	//It dictates how quickly the tire builds up grip as slip 
 	TArray<float> StiffnessFactors;
 	//Determines the overall shape of the curve 

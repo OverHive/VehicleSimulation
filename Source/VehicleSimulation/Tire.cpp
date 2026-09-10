@@ -80,7 +80,6 @@ float UTire::GetPeakSlips(const int Index)
 	}
 	return 0.0f;
 }
-
 FVector UTire::GetLateralForceVector() const
 {
 	if (!IsGrounded || FMath::Abs(SlipAngle) < KINDA_SMALL_NUMBER)
@@ -180,7 +179,7 @@ void UTire::UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const T
 void UTire::UpdateWheelWorldPosition(FVector const MeshScale)
 {
 	SetRelativeLocation(WheelConfig.Position / MeshScale);
-	WheelMesh->SetRelativeLocation(WheelConfig.Position/MeshScale);
+	WheelMesh->SetRelativeLocation(WheelConfig.Position / MeshScale);
 }
 
 void UTire::ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTime, const bool IsBraking)
@@ -244,28 +243,28 @@ float UTire::CalculateRotationalAcceleration(const float CurrentWheelRotationalV
 	if (Inertia != 0 && Radius != 0)
 	{
 		//Calculate the net force on the wheel
-		const float NetForce = LongitudinalForceMagnitude* Multiplier - RotationSign*ResistiveForce;
+		const float NetForce = LongitudinalForceMagnitude * Multiplier - RotationSign * ResistiveForce;
 		//Convert the force in to a torque
 		float NetTorque = NetForce * Radius;
 		//Calculate the acceleration
-		float RotationalVelocityPerFrame = (NetTorque  / Inertia) * DeltaTime;
+		float RotationalVelocityPerFrame = (NetTorque / Inertia) * DeltaTime;
 		//Calculate the maximum speed change the wheel can undergo per time period
 		//based on the wheel's ground speed and surface speed
 		const float SurfaceSpeed = CurrentWheelRotationalVelocity * Radius;
 		const float SpeedScale = FMath::Max3(FMath::Abs(SurfaceSpeed), FMath::Abs(GroundSpeed), 10.0f);
-		const float MaxSurfaceSpeedChange =  DeltaTime * SpeedScale;
+		const float MaxSurfaceSpeedChange = DeltaTime * SpeedScale;
 		//Clamp the acceleration based on the maximum velocity change
 		RotationalVelocityPerFrame = FMath::Clamp(RotationalVelocityPerFrame,
 			-MaxSurfaceSpeedChange / Radius, MaxSurfaceSpeedChange / Radius);
 		//Prevent the wheel from swapping directions in a single frame
-		RotationalVelocityPerFrame = 1 >= 0 ? FMath::Max(RotationalVelocityPerFrame, -CurrentWheelRotationalVelocity) : FMath::Min(RotationalVelocityPerFrame, -CurrentWheelRotationalVelocity);
+		float NextSign = CurrentWheelRotationalVelocity + RotationalVelocityPerFrame >= 0 ? 1 : -1;
 		return  RotationalVelocityPerFrame;
 	}
 	return 0;
 }
 
 
-void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude, const float MaxBrakingForce, const float BrakeStrength, const float GroundSpeed, const float DeltaTime)
+void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude, const float MaxBrakingForce, const float BrakeStrength, const float GroundSpeed,const float DeltaTime)
 {
 	float Radius = SuspensionSettings.WheelRadius;
 	if (DeltaTime != 0)
@@ -279,32 +278,53 @@ void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude
 		float RotationSign = WheelRotationalVelocity >= 0 ? 1 : -1;
 		if (Inertia != 0 && Radius != 0)
 		{
-			//Calculate the net force on the wheel
-
 			float ResistiveForce = 0;
-			float  Multiplier = 1.0;
+			//The throttle multiplier
+			float Multiplier = 1.0;
+			//float Error = (SlipRatio - PeakSlips[WHEELMODE::ACCELERATION]);
+			//The change in speed to return to the slip ratio peak
+			float SpeedError = (GroundSpeed * (PeakSlips[WHEELMODE::ACCELERATION] + 1) - WheelRotationalVelocity * Radius) / Radius;
+			//The per frame acceleration need to return to the peak
+			float CorrectionAcceleration = SpeedError / DeltaTime;
+			//The force need to provide corrective acceleration
+			float CorrectiveForce = (CorrectionAcceleration * Inertia / Radius);
+			//The direction the corrective force needs to act
+			float CorrectiveSign = FMath::Sign(SpeedError);
+			//The amount of force available for pulsing the brakes
+			float AvailableBrakingForce = MaxBrakingForce * (1 - BrakeStrength);
+			//The direction of the throttle
+			float ThrottleSign = FMath::Sign(LongitudinalForceMagnitude);
+			GEngine->AddOnScreenDebugMessage(21, 3.f, FColor::Green, FString::Printf(TEXT("CorrectiveSign: %f, RotationSigh: %f, ThrottleSign: %f "), RotationSign, RotationSign, ThrottleSign));
 
-			//If the 
-			if (SlipRatio > GetPeakSlips(WHEELMODE::ACCELERATION))
+			//If the wheel's rotational velocity needs to be increased and there is a force for doing so accelerate the wheel
+			if (ThrottleSign == RotationSign && CorrectiveSign == RotationSign && LongitudinalForceMagnitude != 0)
 			{
-				float Error = (SlipRatio - PeakSlips[WHEELMODE::ACCELERATION]) * 0.8;
-				ResistiveForce = FMath::Min(Error, (1 - BrakeStrength)) * MaxBrakingForce;
-				Multiplier = FMath::Max(1 - Error, 0);
+				Multiplier = FMath::Min(FMath::Abs(CorrectiveForce / (LongitudinalForceMagnitude)), 1);
+				GEngine->AddOnScreenDebugMessage(21, 3.f, FColor::Green, FString::Printf(TEXT("Higher: %f Ncm"), Multiplier));
 			}
+			//If the wheel's rotational velocity needs to be reduced pulse the brakes and reduce the throttle if needed
+			else if (CorrectiveSign * -1 == RotationSign && AvailableBrakingForce != 0)
+			{
+				//Calculate the maximum force we need or can give for decelerating the wheel
+				ResistiveForce = FMath::Min(FMath::Abs(CorrectiveForce), AvailableBrakingForce);
+				//If the total corrective force needed force exceeds the pulsing force reduce the throttle
+				if (AvailableBrakingForce < LongitudinalForceMagnitude + FMath::Abs(CorrectiveForce) && CorrectiveSign == ThrottleSign * -1 && LongitudinalForceMagnitude != 0)
+				{
+					Multiplier = FMath::Max(0, (AvailableBrakingForce - FMath::Abs(CorrectiveForce)) / FMath::Abs(LongitudinalForceMagnitude));
+				}
+				GEngine->AddOnScreenDebugMessage(21, 3.f, FColor::Green, FString::Printf(TEXT("Low: %f Ncm"), Multiplier));
+			}
+			//Calculate the acceleration
 			float RotationalVelocityPerFrame = CalculateRotationalAcceleration(WheelRotationalVelocity, LongitudinalForceMagnitude, ResistiveForce, Multiplier, GroundSpeed, DeltaTime);
 
-			//
-			//UpdateSlipRatio(WheelRotationalVelocity + RotationalVelocityPerFrame, GroundSpeed, BrakeStrength > 0);
-			float WheelSurfaceSpeed = (WheelRotationalVelocity + RotationalVelocityPerFrame) * SuspensionSettings.WheelRadius;
-			float Denominator = GroundSpeed;
-			float FakeSlipRatio = FMath::Abs(Denominator) > 0.1f ? (WheelSurfaceSpeed - GroundSpeed) / Denominator : 0;
 
 			//Update the rotation velocity with the acceleration
 			if (RotationalVelocityPerFrame != 0)
 			{
 				WheelRotationalVelocity += RotationalVelocityPerFrame;
 			}
-			UpdateSlipRatio(WheelRotationalVelocity,GroundSpeed,false);
+			//	WheelRotationalVelocity = GroundSpeed * (PeakSlips[WHEELMODE::ACCELERATION] + 1) / Radius;
+			UpdateSlipRatio(WheelRotationalVelocity, GroundSpeed, false);
 		}
 	}
 }
