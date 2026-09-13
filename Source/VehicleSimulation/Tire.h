@@ -61,16 +61,16 @@ public:
 	float GetRollingRadius() const { return RollingRadius; };
 	//Return the braking force of the tire
 	float GetBrakingForce() const;
-	//Applies the friction circle to a given force
-	float FrictionCircle(const float LongitudinalForce, const float LaterialForce, const bool LongitudinalLeading) const;
 	//Get the inertia of the wheels
 	float GetWheelInertia() const { return Inertia; };
 	//Calculates the peak slips values
 	float CalculatePeakSlip(const int Index) const;
 	//Returns peak slip values
 	float GetPeakSlips(const int Index);
+	//Returns the maximum grip
+	const float GetMaxGrip() { return MaxGrip; };
 	//Returns the lateral force on the tire
-	FVector GetLateralForceVector() const;
+	FVector GetLateralForceVector(const float DeltaTime) const;
 	//Update the frictional coefficient of the tire
 	void UpdateTireFrictionCoefficient(const float NewValue);
 	//Update the friction coefficient
@@ -111,6 +111,8 @@ public:
 	void ClampToVehicleWheelSpeed(const float WheelSpeed, const float DeltaTime, const bool IsBraking);
 	//Gets the starting dimensions of the tire mesh
 	void StoreInitialTireMeshDimensions();
+	//Reset the rotational velocity of the wheel
+	void ResetRotationalVelocity() { WheelRotationalVelocity = 0; }
 	//Gets the wheel's contact point
 	FVector GetContactPoint() const { return ContactPoint; }
 	//Returns the direction of the normal force on the wheel 
@@ -160,6 +162,8 @@ private:
 	float BrakingTorque = 0;
 	float TireCompression = 0.0f;
 	float SuspensionCompression = 0.0f;
+	float LastLateralVelocity = 0;
+	const float MinSlipSpeed = 20.0f;
 	FVector WheelMeshDimension = FVector::ZeroVector;
 	FVector WheelPosition = FVector::ZeroVector;
 };

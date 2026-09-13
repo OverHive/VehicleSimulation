@@ -29,6 +29,9 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	UFUNCTION(BlueprintCallable, Category = "Preset")
+	//Returns the vehicle to its initial orientation and position
+	void ResetVehiclePosition();
 
 	//<----------------------------------------------- Preset variables ------------------------------------>
 	//Applies a preset to the vehicle
@@ -40,7 +43,7 @@ public:
 	//The currently selected preset
 	FCarSettings CurrentPresets;
 	//<----------------------------------------------- End ------------------------------------------------->
-	
+
 	//<----------------------------------------------- Mesh ------------------------------------------------>
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class USkeletalMeshComponent* SkeletalMesh;
@@ -74,8 +77,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
 	float AirDensity = 1.20;
-
-
 	//The threshold for activating the magic formula
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vehicle Parameters");
 	float FormulaThreshold = 5.0f; //Km/h
@@ -83,7 +84,7 @@ public:
 	float GearRatio = 3.0f;
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
-	float MaxSteeringAngle = 35.0f;      // degrees at full lock
+	float MaxSteeringAngle = 2.7f;      // degrees at full lock
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float SteeringInterpSpeed = 20.0f;
@@ -132,13 +133,13 @@ private:
 	// Handles pitch dynamics
 	void CalculatePitchAndHeaveDynamics(float DeltaTime, float LongitudinalAcceleration);
 	//Updates the state of a wheel
-	void UpdateWheel(UTire* Tire, const float LongitudinalForceMagnitude, const float LateralForceMagnitude, float DeltaTime);
+	void UpdateWheel(UTire* Tire, const float LongitudinalForceMagnitude, float DeltaTime);
 	//Applies suspension forces to the vehicle
 	void ApplySuspensionForceEffects();
 	//Apply a force through a wheel
-	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction);
+	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction , const bool HasXTorque = false, const bool HasYTorque = false, const bool HasZTorque = false);
 	//Applies a force at location
-	void ApplyLocationForce(FVector Force, FVector Position, bool HasPitch = false, bool HasRoll = false);
+	void ApplyLocationForce(FVector Force, FVector Position, const bool HasZTorque = false, const bool HasYTorque = false, const bool HasXTorque = false);
 	//Obtains the static distribution of the vehicle's weight
 	void UpdateStaticLoads();
 	//Get throttle from a engine 
@@ -174,7 +175,7 @@ private:
 	FVector LastVelocity = FVector::ZeroVector;
 	FVector Acceleration = FVector::ZeroVector;
 	FVector DefaultVisualMeshPosition = FVector::ZeroVector;
-	FVector MeshScale = FVector(1,1,1);
+	FVector MeshScale = FVector(1, 1, 1);
 	int GearIndex = 0;
 	//Debug configuration
 	float DebugSetting = 0.0f;
@@ -205,13 +206,17 @@ private:
 	float RearDynamicLoad = 0.0f;
 	bool IsUsingMagicFormula = false;
 	bool IsBraking = false;
-	bool IsLongitudinalControlled = true;
-
+	//<-----------------------------------------------Spawning data ---------------------------------------->
+	FVector SpawnLocation = FVector::ZeroVector;
+	FQuat SpawnDirection = FQuat(0, 0, 0, 0);
+	//<----------------------------------------------- End ------------------------------------------------->
 
 	//For model visualising
 	float TargetHeight = 30.0f;
 	float GroundOffset = 13.5f;
 	FVector MeshDimension = FVector::ZeroVector;
+	//Creates Torque for the vehicle 
+	FVector CreateVehicleTorque(FVector Force, FVector Position);
 
 	//For preventing multiple gear changes a single press 
 	bool IsGearChanging = false;
