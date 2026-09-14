@@ -299,6 +299,11 @@ void AVehicle::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 			EnhancedInputComponent->BindAction(GearAction, ETriggerEvent::Triggered, this, &AVehicle::Input_Gear);
 			EnhancedInputComponent->BindAction(GearAction, ETriggerEvent::Completed, this, &AVehicle::Input_Gear);
 		}
+		if (PauseAction)
+		{
+			// Bind Pausing
+			EnhancedInputComponent->BindAction(PauseAction, ETriggerEvent::Started, this, &AVehicle::Input_Pause);
+		}
 	}
 
 }
@@ -309,10 +314,15 @@ void AVehicle::ResetVehiclePosition()
 	SetActorRotation(SpawnDirection);
 	PhysicMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
 	PhysicMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
-	for (UTire* Tire: AllTires)
+	for (UTire* Tire : AllTires)
 	{
 		Tire->ResetRotationalVelocity();
 	}
+}
+
+void AVehicle::BlueprintTogglePauseMenu()
+{
+	TogglePauseMenu();
 }
 
 void AVehicle::SetFromPreset(const int Index)
@@ -379,6 +389,16 @@ void AVehicle::Input_Gear(const FInputActionValue& Value)
 	}
 	IsGearChanging = Value.Get<float>() != 0;
 	GearRatio = CurrentPresets.GearRatios[GearIndex];
+}
+
+void AVehicle::Input_Pause(const FInputActionValue& Value)
+{
+
+	//Pause the program the first frame the pause button is down
+
+	TogglePauseMenu();
+
+
 }
 
 FVector AVehicle::CreateVehicleTorque(FVector Force, FVector Position)

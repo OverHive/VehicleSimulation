@@ -32,7 +32,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Preset")
 	//Returns the vehicle to its initial orientation and position
 	void ResetVehiclePosition();
+	UFUNCTION(BlueprintImplementableEvent, Category = "Menu")
+	//Opens the menu
+	void TogglePauseMenu();
 
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	//Toggles the menu from a blueprint
+	void BlueprintTogglePauseMenu();
 	//<----------------------------------------------- Preset variables ------------------------------------>
 	//Applies a preset to the vehicle
 	UFUNCTION(BlueprintCallable, Category = "Preset")
@@ -73,6 +79,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* DebugAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* PauseAction;
 	//<----------------------------------------------- End ------------------------------------------------->
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Physics")
@@ -171,6 +179,7 @@ private:
 	void Input_Brake(const FInputActionValue& Value);
 	void Input_Debug(const FInputActionValue& Value);
 	void Input_Gear(const FInputActionValue& Value);
+	void Input_Pause(const FInputActionValue& Value);
 	FVector CurrentVelocity = FVector::ZeroVector;
 	FVector LastVelocity = FVector::ZeroVector;
 	FVector Acceleration = FVector::ZeroVector;
@@ -206,6 +215,7 @@ private:
 	float RearDynamicLoad = 0.0f;
 	bool IsUsingMagicFormula = false;
 	bool IsBraking = false;
+	bool IsPauseButtonDown = false;
 	//<-----------------------------------------------Spawning data ---------------------------------------->
 	FVector SpawnLocation = FVector::ZeroVector;
 	FQuat SpawnDirection = FQuat(0, 0, 0, 0);
