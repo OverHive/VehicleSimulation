@@ -218,7 +218,7 @@ void AVehicle::SuspensionRayCast()
 			//Calculate compression using distance from mount point to the ground hit point
 			float CurrentDistance = RoundToDecimalPoint(FVector::Dist(StartLocation, Hit.Location));
 			CurrentDistance = FMath::Min(CurrentDistance, Wheel.SuspensionLength);
-			float Error = FMath::FGenericPlatformMath::Max(TargetHeight - CurrentDistance, 0);
+			float Error = FMath::FGenericPlatformMath::Max(Wheel.WheelRadius - CurrentDistance, 0);
 
 			//Get the compression of the wheel
 			float Compression = Tire->GetCompression(Error - GroundOffset);
