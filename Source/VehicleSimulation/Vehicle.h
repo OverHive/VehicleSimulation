@@ -8,6 +8,7 @@
 #include "Tire.h"
 #include "WheelSuspensionSetting.h"
 #include "VehiclePresets.h"
+#include "VehicleHUD.h"
 #include "Vehicle.generated.h"
 
 UCLASS(BlueprintType, Blueprintable)
@@ -48,6 +49,8 @@ public:
 	FVehiclePresets VehicleSettings;
 	//The currently selected preset
 	FCarSettings CurrentPresets;
+	//The index of the selected preset
+	int PresetIndex = 0;
 	//<----------------------------------------------- End ------------------------------------------------->
 
 	//<----------------------------------------------- Mesh ------------------------------------------------>
@@ -55,10 +58,10 @@ public:
 	class USkeletalMeshComponent* SkeletalMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class  UStaticMeshComponent* PhysicMesh;
+	class UStaticMeshComponent* PhysicsMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class  UStaticMeshComponent* VisualMesh;
+	class UStaticMeshComponent* VisualMesh;
 	//<----------------------------------------------- End ------------------------------------------------->
 
 	//<----------------------------------------------- Input Assets ---------------------------------------->
@@ -111,8 +114,6 @@ public:
 	UTire* RearRightTire;
 	UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
 	TArray<UTire*> AllTires;
-	UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
-	TArray<UTire*> FrontTires;
 
 	UPROPERTY(EditAnywhere, Category = "Suspension")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
@@ -122,7 +123,6 @@ public:
 	float LongitudinalDamping = 5.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float SpringStiffness = 8.0f;
-	FName VehiclePresetName = "Undefined";
 private:
 	//Models vehicle suspension using ray cast
 	void SuspensionRayCast();
@@ -206,7 +206,7 @@ private:
 	float FrontUnsprungForce = 0.0f;
 	float RearUnsprungForce = 0.0f;
 	float CurrentDrivingForce = 0.0f;
-	float SumOfResistiveForces = 0.0f;
+	float CurrentDrag = 0.0f;
 	float PitchAngle = 0.0f;
 	float PitchVelocity = 0.0f;
 	float HeavePosition = 0.0f;
@@ -216,14 +216,18 @@ private:
 	bool IsUsingMagicFormula = false;
 	bool IsBraking = false;
 	bool IsPauseButtonDown = false;
+	float TargetHeight = 0.0f;
 	//<-----------------------------------------------Spawning data ---------------------------------------->
 	FVector SpawnLocation = FVector::ZeroVector;
 	FQuat SpawnDirection = FQuat(0, 0, 0, 0);
 	//<----------------------------------------------- End ------------------------------------------------->
 
-	//For model visualising
-	float TargetHeight = 30.0f;
-	float GroundOffset = 13.5f;
+	//<-----------------------------------------------Custom HUD ------------------------------------------->
+	VehicleHUD HUDDisplay;
+	//Refreshes the HUD
+	void UpdateHUD();
+	//<----------------------------------------------- End ------------------------------------------------->
+
 	FVector MeshDimension = FVector::ZeroVector;
 	//Creates Torque for the vehicle 
 	FVector CreateVehicleTorque(FVector Force, FVector Position);

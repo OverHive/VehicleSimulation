@@ -40,8 +40,10 @@ public:
 	float GetSlipRatio() const { return SlipRatio; };
 	//Calculate the rolling resistance
 	float GetRollingResistance() const;
+	//Caculates the compression
+	float CalculateCompression(const float CurrentDistance);
 	//Get the compression of the wheel
-	float GetCompression(const float CurrentDistance);
+	float GetCompression() const { return SuspensionCompression; };
 	//Gets the overall suspension force on the tire
 	float CalculateSuspensionForce(const float SuspensionVelocity);
 	//Gets the normal force on the tire

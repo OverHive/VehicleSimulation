@@ -201,7 +201,7 @@ float UTire::GetRollingResistance() const
 	return IsGrounded ? TireLoad * RollingResistanceCoefficient : 0;
 }
 
-float UTire::GetCompression(const float CurrentDistance)
+float UTire::CalculateCompression(const float CurrentDistance)
 {
 	//Calculate the spring compression using the difference between the suspension 
 	//length and the bottom of the wheel
@@ -289,13 +289,11 @@ void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude
 			float AvailableBrakingForce = MaxBrakingForce * (1 - BrakeStrength);
 			//The direction of the throttle
 			float ThrottleSign = FMath::Sign(LongitudinalForceMagnitude);
-			GEngine->AddOnScreenDebugMessage(21, 3.f, FColor::Green, FString::Printf(TEXT("CorrectiveSign: %f, RotationSigh: %f, ThrottleSign: %f "), RotationSign, RotationSign, ThrottleSign));
 
 			//If the wheel's rotational velocity needs to be increased and there is a force for doing so accelerate the wheel
 			if (ThrottleSign == RotationSign && CorrectiveSign == RotationSign && LongitudinalForceMagnitude != 0)
 			{
 				Multiplier = FMath::Min(FMath::Abs(CorrectiveForce / (LongitudinalForceMagnitude)), 1);
-				GEngine->AddOnScreenDebugMessage(21, 3.f, FColor::Green, FString::Printf(TEXT("Higher: %f Ncm"), Multiplier));
 			}
 			//If the wheel's rotational velocity needs to be reduced pulse the brakes and reduce the throttle if needed
 			else if (CorrectiveSign * -1 == RotationSign && AvailableBrakingForce != 0)
@@ -307,7 +305,6 @@ void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude
 				{
 					Multiplier = FMath::Max(0, (AvailableBrakingForce - FMath::Abs(CorrectiveForce)) / FMath::Abs(LongitudinalForceMagnitude));
 				}
-				GEngine->AddOnScreenDebugMessage(21, 3.f, FColor::Green, FString::Printf(TEXT("Low: %f Ncm"), Multiplier));
 			}
 			//Calculate the acceleration
 			float RotationalVelocityPerFrame = CalculateRotationalAcceleration(WheelRotationalVelocity, LongitudinalForceMagnitude, ResistiveForce, Multiplier, GroundSpeed, DeltaTime);
@@ -354,11 +351,10 @@ void UTire::UpdateSuspension(const float Stiffness, const float Damping, const f
 
 	//Get the static force on the string 
 	UpdateTireLoad(StaticTireLoad);
-	float ForceOnSpring = TireLoad;
 
 	//Calculate the resting suspension length
 
-	SuspensionSettings.RestPosition = SuspensionSettings.SpringStiffness != 0 ? TireLoad / SuspensionSettings.SpringStiffness : 0;
+	SuspensionSettings.RestPosition = SuspensionSettings.SpringStiffness != 0 ? StaticTireLoad / SuspensionSettings.SpringStiffness : 0;
 }
 
 UTire::~UTire()
