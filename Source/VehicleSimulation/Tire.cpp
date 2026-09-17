@@ -42,25 +42,32 @@ float UTire::GetBrakingForce() const
 
 float UTire::CalculatePeakSlip(const int Index) const
 {
-	const int i = FMath::Clamp(Index, 0, 2);
-	const float B = StiffnessFactors[i];
-	const float C = ShapeFactors[i];
-	const float E = CurvatureFactors[i];
-
-	// C <= 1 never reaches the sine's peak at finite slip
-	if (B <= 0.0f || C <= 1.0f) return 0.0f;
-
-	const float Target = FMath::Tan(0.5f * PI / C);
-
-	// Seed with the E = 0 solution, then Newton–Raphson
-	float X = Target / B;
-	for (int Iter = 0; Iter < 6; ++Iter)
+	const int i = FMath::Clamp(Index, 0, TireFormulas.Num());
+	if (TireFormulas.Num() > 0)
 	{
-		const float F = B * X * (1.0f - E) + E * FMath::Atan(B * X) - Target;
-		const float dF = B * (1.0f - E) + E * B / (1.0f + FMath::Square(B * X));
-		X -= F / dF;
+		MagicFormulaModel SelectedTireFormula = TireFormulas[i];
+		const float B = SelectedTireFormula.StiffnessFactor;
+		const float C = SelectedTireFormula.ShapeFactor;
+		const float E = SelectedTireFormula.CurvatureFactor;
+		const float Sh = SelectedTireFormula.HorizontalShift;
+
+		// C <= 1 never reaches the sine's peak at finite slip
+		if (B <= 0.0f || C <= 1.0f) return 0.0f;
+
+		const float Target = FMath::Tan(0.5f * PI / C);
+
+		// Seed with the E = 0 solution, then Newton–Raphson
+		float X = Target / B;
+		for (int Iter = 0; Iter < 6; ++Iter)
+		{
+			const float F = B * X * (1.0f - E) + E * FMath::Atan(B * X) - Target;
+			const float dF = B * (1.0f - E) + E * B / (1.0f + FMath::Square(B * X));
+			if (FMath::Abs(dF) < SMALL_NUMBER) break;
+			X -= F / dF;
+		}
+		return FMath::Max(X - Sh, 0.0f);
 	}
-	return X;
+	return 0;
 }
 
 float UTire::GetPeakSlips(const int Index)
@@ -155,13 +162,12 @@ void UTire::UpdateRollingRadius(FVector AxisPosition)
 		? FMath::Abs(AxisPosition.Z - ContactPoint.Z)
 		: SuspensionSettings.WheelRadius;*/
 }
-void UTire::UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors)
+
+void UTire::UpdateWheelFeatures(const TArray<MagicFormulaModel> NewTireFormulas)
 {
-	StiffnessFactors = NewStiffnessFactors;
-	ShapeFactors = NewShapeFactors;
-	CurvatureFactors = NewCurvatureFactors;
-	//Get the new slips peaks
+	TireFormulas.Empty();
 	PeakSlips.Empty();
+	TireFormulas = NewTireFormulas;
 	for (int i = WHEELMODE::ACCELERATION; i <= WHEELMODE::CORNERING; i++)
 	{
 		PeakSlips.Add(CalculatePeakSlip(i));
@@ -324,11 +330,12 @@ void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude
 float UTire::MagicFormula(const float peakValue, const float x, const int Index) const
 {
 
-	int FactorIndex = FMath::Clamp(Index, 0, 2);
-	float StiffnessEffect = StiffnessFactors[FactorIndex] * x;
-	float CurvatureEffect = CurvatureFactors[FactorIndex] * (StiffnessEffect - FMath::Atan(StiffnessEffect));
-	float arc = FMath::Atan(StiffnessEffect - CurvatureEffect);
-	return peakValue * FMath::Sin(ShapeFactors[FactorIndex] * arc);
+	int FormulaIndex = FMath::Clamp(Index, 0, TireFormulas.Num());
+	if (TireFormulas.Num() > 0)
+	{
+		return TireFormulas[FormulaIndex].MagicFormula(peakValue, x);
+	}
+	return 0;
 }
 
 void UTire::StoreTireContactInformation(const FHitResult Hit)

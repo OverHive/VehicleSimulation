@@ -19,7 +19,7 @@ void VehicleHUD::BodyHUD(float ForwardVelocity, float LongitudinalAcceleration, 
 			TEXT("Thr %+0.2f | Brk %0.2f | Steer %+0.2f (%+0.1f deg) | Gear %d (%0.2f)\n")
 			TEXT("Drag %0.1f N | Weight %0.1f N | Axle load F/R %0.1f/%0.1f %%\n")
 			TEXT("Body mass %0.1f kg | Vert vel %+0.1f cm/s"),
-			ForwardVelocity,
+			ForwardVelocity*0.036f,
 			LongitudinalAcceleration * 0.01f,
 			CurrentThrottle, CurrentBrake, CurrentSteering, CurrentSteeringAngle, GearIndex + 1, GearRatio, //1-based for display - 016 acceptance c5 (change 023)
 			CurrentDrag / 100.0f, VehicleWeight / 100.0f, 100 * FrontAxleShare, 100 * RearAxleShare,

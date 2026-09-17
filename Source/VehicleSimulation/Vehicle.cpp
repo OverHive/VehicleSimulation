@@ -205,13 +205,12 @@ void AVehicle::SuspensionRayCast()
 			CurrentDistance = FMath::Min(CurrentDistance, Wheel.SuspensionLength);
 			float Error = FMath::Max(Wheel.WheelRadius - CurrentDistance, 0);
 			//Get the compression of the wheel
-			float Compression = Tire->CalculateCompression(Error-TargetHeight);
+			float Compression = Tire->CalculateCompression(Error - TargetHeight);
 
 			Tire->IsGrounded = true;
 
 			// We need the velocity of the vehicle at the specific point where the suspension is attached
-			FVector VelocityAtPoint = PhysicsMesh->GetPhysicsLinearVelocityAtPoint(StartLocation) +
-				FVector::CrossProduct(PhysicsMesh->GetPhysicsAngularVelocityInRadians(), PhysicsMesh->GetComponentLocation() - StartLocation);
+			FVector VelocityAtPoint = PhysicsMesh->GetPhysicsLinearVelocityAtPoint(StartLocation);
 
 			// The damping force is based on the velocity along the suspension axis (Up Vector)
 			float SuspensionVelocity = FVector::DotProduct(VelocityAtPoint, Hit.Normal);
@@ -219,10 +218,10 @@ void AVehicle::SuspensionRayCast()
 			Tire->CalculateSuspensionForce(SuspensionVelocity);
 			//Update the suspension for the model
 			float SpringForce = Error * SpringStiffness;
-			float DampingForce = FVector::DotProduct(VelocityAtPoint, FVector::UpVector) * LongitudinalDamping;
-			FVector ForceZ = Hit.Normal * FMath::Max(SpringForce - FMath::Max(DampingForce, 0),0);
+			float DampingForce = FMath::Max(SuspensionVelocity * LongitudinalDamping, 0);
+			FVector ForceZ = Hit.Normal * FMath::Max(SpringForce - DampingForce, 0);
 
-			GEngine->AddOnScreenDebugMessage(i, 3.f, FColor::Orange, FString::Printf(TEXT("Debug mode:%f , %f N"), Error,TargetHeight));
+			GEngine->AddOnScreenDebugMessage(i, 3.f, FColor::Orange, FString::Printf(TEXT("Debug mode:%f , %f N"), Error, TargetHeight));
 			i++;
 
 			//Store the hit location and normal
@@ -238,7 +237,7 @@ void AVehicle::SuspensionRayCast()
 				Tire->UpdateFrictionCoefficient(Friction);
 			}
 			//Apply the suspension to the model
-			ApplyLocationForce(ForceZ, Tire->GetContactPoint(), true, true);
+			ApplyLocationForce(ForceZ, Tire->GetContactPoint(), true, true,true);
 		}
 		else
 		{
@@ -319,9 +318,9 @@ void AVehicle::SetFromPreset(const int Index)
 	//Apply the settings
 	GearIndex = 0;
 	GearRatio = CurrentPresets.GearRatios[0];
-	LongitudinalDamping = CurrentPresets.TotalVehicleMass * 5;
 	PhysicsMesh->SetMassOverrideInKg(NAME_None, CurrentPresets.TotalVehicleMass, true);
-	SpringStiffness = CurrentPresets.TotalVehicleMass * 20;
+	SpringStiffness = CurrentPresets.TotalVehicleMass * 50;
+	LongitudinalDamping = 0.4f * 2.f * FMath::Sqrt(SpringStiffness * CurrentPresets.TotalVehicleMass / 4.f);
 	TargetHeight = 0.25 * PhysicsMesh->GetMass() * Gravity / SpringStiffness;
 	if (MeshDimension.X != 0 && MeshDimension.Y != 0 && MeshDimension.Z != 0)
 	{
@@ -454,7 +453,7 @@ void AVehicle::CreateTires()
 			Tire->UpdateRollingResistanceCoefficient(IsFrontWheel ? CurrentPresets.FrontRollingResistanceCoefficient : CurrentPresets.RearRollingResistanceCoefficient);
 			Tire->UpdateWheelInertia(IsFrontWheel ? CurrentPresets.FrontWheelInertia : CurrentPresets.RearWheelInertia);
 			Tire->UpdateBrakingTorque(IsFrontWheel ? CurrentPresets.FrontBrakeTorque : CurrentPresets.RearBrakeTorque);
-			Tire->UpdateWheelFeatures(CurrentPresets.StiffnessFactors, CurrentPresets.ShapeFactors, CurrentPresets.CurvatureFactors);
+			Tire->UpdateWheelFeatures(CurrentPresets.TireFormulas);
 			//Store the socket name with wheel
 			Tire->SocketName = SocketNames[i];
 			Tire->UpdateWheelWorldPosition(MeshScale);

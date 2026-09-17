@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "WheelConfiguration.h"
+#include "MagicFormulaModel.h"
 #include "CarSettings.generated.h"
 
 /** The class for creating individual vehicle presents
@@ -68,9 +69,7 @@ struct VEHICLESIMULATION_API FCarSettings
 	TMap <float, float> TorqueCurve;
 	float MaxRPM = 0;
 	//|--------------------------------- Tire features ----------------------------|
-	TArray<float> StiffnessFactors = { 0.0f,0.0f,0.0f };
-	TArray<float> ShapeFactors = {0.0f,0.0f,0.0f};
-	TArray<float> CurvatureFactors = {0.0f,0.0f,0.0f};
+	TArray < MagicFormulaModel> TireFormulas = { MagicFormulaModel(),MagicFormulaModel(),MagicFormulaModel() };
 	//|-------------------------------- End ---------------------------------------|
 
 	//|--------------------------------- Wheel configuration ----------------------|
@@ -85,8 +84,7 @@ struct VEHICLESIMULATION_API FCarSettings
 		const float NewFrontTireVerticalStiffness, const float NewRearTireVerticalStiffness, const float NewFrontWheelRadius, const float NewRearWheelRadius,
 		const float NewFrontTireFriction, const float NewRearTireFriction, const float NewHeaveDamping, TMap <float, float> NewTorqueCurve, float const NewCurveStep
 		, const float NewMaximumRPM, const float NewMinimumStartingRPM, const float NewFrontRollingResistanceCoefficient, const float NewRearRollingResistanceCoefficient,
-		const float NewFrontWheelInertia, const float NewRearWheelInertia, const float NewFrontBrakeTorque, const float NewRearBrakeTorque,
-		const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors, const TMap <FName, FWheelConfiguration> NewWheelConfigurations)
+		const float NewFrontWheelInertia, const float NewRearWheelInertia, const float NewFrontBrakeTorque, const float NewRearBrakeTorque,const TArray<MagicFormulaModel> NewTireFormulas, const TMap <FName, FWheelConfiguration> NewWheelConfigurations)
 	{
 		MinimumStartingRPM = NewMinimumStartingRPM;
 		VehicleName = NewVehicleName;
@@ -117,9 +115,7 @@ struct VEHICLESIMULATION_API FCarSettings
 		FrontTireVerticalStiffness = NewFrontTireVerticalStiffness;
 		RearTireVerticalStiffness = NewRearTireVerticalStiffness;
 
-		CurvatureFactors = NewCurvatureFactors;
-		StiffnessFactors = NewStiffnessFactors;
-		ShapeFactors = NewShapeFactors;
+		TireFormulas = NewTireFormulas;
 
 		//Convert from m^2 to cm^2
 		PitchInertia = NewPitchInertia * 10000;

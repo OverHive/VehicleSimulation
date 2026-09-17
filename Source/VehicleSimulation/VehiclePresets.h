@@ -28,6 +28,7 @@ struct VEHICLESIMULATION_API FVehiclePresets
 	GENERATED_BODY()
 	FVehiclePresets() {
 		CreatePresetForChevroletCorvetteGT2();
+		CreatePresetForSkipBarber2000();
 	}
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presets")
 	TArray <FCarSettings> Presets;
@@ -79,8 +80,8 @@ struct VEHICLESIMULATION_API FVehiclePresets
 			{4250,722}, {4500,725}, {4750,703}, {5000,666}, {5250,628}, {5500,594}, {5750,562}, {6000,529}, {6250,499},
 			{6500,468}, {6750,435}, {7000,403}, {7250,377}, {7500,340}, {7750,300}, {8000,260}, {8250,220}, {8500,180},
 			{8750,140}, {9000,100}, {9250,50} };
-		TMap<FName, FWheelConfiguration> NewWheelConfigurations = CreateWheelConfigurations(CreateWheelPositions( 1.35f, 0.835f, 0.0f), DriveConfiguration::RWD, SteerConfiguration::FWS);
-
+		TMap<FName, FWheelConfiguration> NewWheelConfigurations = CreateWheelConfigurations(CreateWheelPositions(1.35f, 0.835f, 0.0f), DriveConfiguration::RWD, SteerConfiguration::FWS);
+		TArray<MagicFormulaModel> TireFormulas = { {  21.2302f, 1.3424f, 0.1445f, 0.0f, 0.2106f,},{  25.7528f, 1.2348f, -2.268f, 0.0f, 0.2756f},{9.8933f,1.1722f,-5.0f,0.0341,-0.3648} };
 
 
 		Presets.Add(FCarSettings("2009 Chevrolet Corvette GT2", 1190.6f, 1.163f, 2.1f,
@@ -92,11 +93,32 @@ struct VEHICLESIMULATION_API FVehiclePresets
 			80000.0f, 81000.0f, 0.3252f, 0.3528f,
 			2.0f, 2.09f, 350000.f, TorqueMap,
 			250, 9250, 500, 0.0118,
-			0.0133, 1.096f, 1.603f, 5234.4f, 3111.2f, { 13.2744f,20.00f,19.1993f }, { 2.1647f,2.50f, 2.1178f }, { 0.0012f,0.0004f, 0.0094f }, NewWheelConfigurations));
+			0.0133, 1.096f, 1.603f, 5234.4f, 3111.2f, TireFormulas, NewWheelConfigurations));
 	}
 	//Produces parameters for replicating the behaviour of a SkipBarber 2000
 	void CreatePresetForSkipBarber2000()
 	{
-		//0.014, 0.0.15
+		TMap<float, float> TorqueMap = { {1000, 135 }, {1500,159}, {2000,173},{2500,176},
+			{3000,181.2}, {3500,179},{4000,188}, {4500,191.4},
+			{5000,192.4},{5500,187.2},{6000,173.3},{6500,157.7},
+			{7000,142.5}};
+		TMap<FName, FWheelConfiguration> NewWheelConfigurations = CreateWheelConfigurations(CreateWheelPositions(1.4846f, 0.9734f, 0.0f), DriveConfiguration::RWD, SteerConfiguration::FWS);
+
+		TArray<MagicFormulaModel> TireFormulas = { 
+			{ 15.6386f, 1.5558f , 1.0504f,  0.0f , -0.0357f},
+			{ 15.6386f, 1.5558f , 1.0504f,  0.0f , -0.0357f},
+			{ 15.6386f, 1.5558f , 1.0504f,  0.0f , -0.0357f }
+	};
+		Presets.Add(FCarSettings("SkipBarber 2000", 501.446f, 1.163f, 1.80f,
+			0.356f, 2.458f, 0.311f, 0.973f,
+			1.485f, 1.3525f, { -2.286 ,2.067f,1.706f,1.444f,1.182,0.960f }, 3.444f,
+			0.88f, 680.62f, 193515.0f, 15400.0f,
+			7000.0f, 9250.0f, 7000.0f, 15000.0f,
+			1440.0f,1450.0f, 63.2f, 63.854f,
+			41406.0f, 50216.7f, 0.2957f, 0.31831f,
+			1.28f, 1.29f, 90000.0f, TorqueMap,500.0f,
+			7000, 1000, 0.0140,
+			0.0150, 0.859f, 1.14882f, 1401.0f, 1401.0f, TireFormulas, NewWheelConfigurations));
+
 	}
 };

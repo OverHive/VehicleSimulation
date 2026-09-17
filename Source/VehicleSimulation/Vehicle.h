@@ -95,7 +95,7 @@ public:
 	float GearRatio = 3.0f;
 	//Vehicle steering
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
-	float MaxSteeringAngle = 2.7f;      // degrees at full lock
+	float MaxSteeringAngle = 35.0f;      // degrees at full lock
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float SteeringInterpSpeed = 20.0f;

@@ -8,19 +8,29 @@ struct VEHICLESIMULATION_API MagicFormulaModel
 	//It dictates how quickly the tire builds up grip as slip 
 	float StiffnessFactor = 0.0f;
 	//Determines the overall shape of the curve 
-	float ShapeFactors = 0.0f;
+	float ShapeFactor = 0.0f;
 	//Determines how much grip is lost once the tire starts sliding 
 	float CurvatureFactor = 0.0f;
 	//Offset at the slip axis origin
 	float HorizontalShift = 0.0f;
 	//The Force coefficient at zero slip 
 	float VerticalShift = 0.0f;
+	MagicFormulaModel() {};
+	MagicFormulaModel(const float NewStiffnessFactor, const float NewShapeFactor, const float NewCurvatureFactor, const float NewHorizontalShift, const float NewVerticalShift)
+	{
+		StiffnessFactor = NewStiffnessFactor;
+		ShapeFactor = NewShapeFactor;
+		CurvatureFactor = NewCurvatureFactor;
+		HorizontalShift = NewHorizontalShift;
+		VerticalShift = NewVerticalShift;
+	}
 	float MagicFormula(const float peakValue, const float x) const
 	{
-		float StiffnessEffect = StiffnessFactor * x;
+		float Input = (HorizontalShift + x);
+		float StiffnessEffect = StiffnessFactor * Input;
 		float CurvatureEffect = CurvatureFactor * (StiffnessEffect - FMath::Atan(StiffnessEffect));
 		float arc = FMath::Atan(StiffnessEffect - CurvatureEffect);
-		return peakValue * FMath::Sin(ShapeFactors * arc);
+		return peakValue * FMath::Sin(ShapeFactor * arc) + VerticalShift;
 	}
 
 };

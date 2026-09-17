@@ -7,6 +7,7 @@
 
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
+#include "MagicFormulaModel.h"
 #include "WheelSuspensionSetting.h"
 #include "WheelConfiguration.h"
 #include "Tire.generated.h"
@@ -40,7 +41,7 @@ public:
 	float GetSlipRatio() const { return SlipRatio; };
 	//Calculate the rolling resistance
 	float GetRollingResistance() const;
-	//Caculates the compression
+	//Calculates the compression
 	float CalculateCompression(const float CurrentDistance);
 	//Get the compression of the wheel
 	float GetCompression() const { return SuspensionCompression; };
@@ -104,7 +105,7 @@ public:
 	//Updates the braking torque of the wheel
 	void UpdateBrakingTorque(const float NewBrakingTorque) { BrakingTorque = NewBrakingTorque; }
 	//Updates the Magic formula parameters
-	void UpdateWheelFeatures(const TArray<float> NewStiffnessFactors, const TArray<float> NewShapeFactors, const TArray<float> NewCurvatureFactors);
+	void UpdateWheelFeatures(const TArray<MagicFormulaModel> NewTireFormula);
 	//Updates the wheels configuration
 	void UpdateWheelConfiguration(const FWheelConfiguration NewConfig) { WheelConfig = NewConfig; };
 	// Handles resizing the wheel
@@ -126,12 +127,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Position")
 	float SteerAngle = 0.0f;
 	float Inertia = 8500; //Kg cm^2
-	//It dictates how quickly the tire builds up grip as slip 
-	TArray<float> StiffnessFactors;
-	//Determines the overall shape of the curve 
-	TArray<float> ShapeFactors;
-	//Determines how much grip is lost once the tire starts sliding 
-	TArray<float> CurvatureFactors;
+	TArray < MagicFormulaModel> TireFormulas = { MagicFormulaModel(),MagicFormulaModel(),MagicFormulaModel() };
 
 	//For calculating rolling resistance
 	float RollingResistanceCoefficient = 0.015f;
