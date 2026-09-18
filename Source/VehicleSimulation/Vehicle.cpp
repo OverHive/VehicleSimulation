@@ -183,7 +183,6 @@ void AVehicle::SuspensionRayCast()
 
 	// The ray points downwards relative to the vehicle's orientation
 	FVector RayDirection = VehicleUpDirection * -1.0f;
-	int i = 0;
 	//Calculate the forces on acting on the suspension
 	for (UTire*& Tire : AllTires)
 	{
@@ -220,9 +219,6 @@ void AVehicle::SuspensionRayCast()
 			float SpringForce = Error * SpringStiffness;
 			float DampingForce = FMath::Max(SuspensionVelocity * LongitudinalDamping, 0);
 			FVector ForceZ = Hit.Normal * FMath::Max(SpringForce - DampingForce, 0);
-
-			GEngine->AddOnScreenDebugMessage(i, 3.f, FColor::Orange, FString::Printf(TEXT("Debug mode:%f , %f N"), Error, TargetHeight));
-			i++;
 
 			//Store the hit location and normal
 			Tire->StoreTireContactInformation(Hit);
@@ -454,6 +450,7 @@ void AVehicle::CreateTires()
 			Tire->UpdateWheelInertia(IsFrontWheel ? CurrentPresets.FrontWheelInertia : CurrentPresets.RearWheelInertia);
 			Tire->UpdateBrakingTorque(IsFrontWheel ? CurrentPresets.FrontBrakeTorque : CurrentPresets.RearBrakeTorque);
 			Tire->UpdateWheelFeatures(CurrentPresets.TireFormulas);
+			Tire->ResetRotationalVelocity();
 			//Store the socket name with wheel
 			Tire->SocketName = SocketNames[i];
 			Tire->UpdateWheelWorldPosition(MeshScale);

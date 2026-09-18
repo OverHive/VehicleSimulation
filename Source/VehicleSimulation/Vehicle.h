@@ -40,6 +40,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Menu")
 	//Toggles the menu from a blueprint
 	void BlueprintTogglePauseMenu();
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	//Gets the current index of the preset 
+	float GetPresetIndex() { return PresetIndex; };
 	//<----------------------------------------------- Preset variables ------------------------------------>
 	//Applies a preset to the vehicle
 	UFUNCTION(BlueprintCallable, Category = "Preset")

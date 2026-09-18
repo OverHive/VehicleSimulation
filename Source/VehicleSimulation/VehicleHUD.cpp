@@ -42,7 +42,7 @@ void VehicleHUD::WheelHUD(TArray<UTire*> Tires, TFunction <float(UTire* Tire)> T
 	if (GEngine)
 	{
 		const TCHAR* WheelLabels[4] = { TEXT("FR"), TEXT("FL"), TEXT("RR"), TEXT("RL") };
-		FString WheelsBlock = FString(TEXT("=== WHEELS: Grd Comp(cm) Load(N) SusF(N) Trac(N) Grip% Slip(deg) ==="));
+		FString WheelsBlock = FString(TEXT("=== WHEELS: Grd Comp(cm) Load(N) SusF(N) Trac(N) Grip% Slip angle(deg) Slip ratio ==="));
 		for (int i = 0; i < Tires.Num(); i++)
 		{
 			UTire* Tire = Tires[i];
@@ -58,14 +58,16 @@ void VehicleHUD::WheelHUD(TArray<UTire*> Tires, TFunction <float(UTire* Tire)> T
 				const float Traction = TractionFunction(Tire);
 				//Calculate the grip remaining
 				const float GripPercent = Tire->GetMaxGrip() > 0.0f ? FMath::Abs(Traction) / Tire->GetMaxGrip() * 100.0f : 0.0f;
-				WheelsBlock.Appendf(TEXT("\n%s  Y %5.1f %7.1f %7.1f %+7.1f %5.1f%% %6.1f"),
+				WheelsBlock.Appendf(TEXT("\n%s  Y %5.1f %7.1f %7.1f %+7.1f %5.1f%% %6.1f,%6.1f"),
 					Label,
 					Tire->GetCompression(),
 					Tire->TireLoad / 100.0f,
 					Tire->GetSuspensionForce() / 100.0f,
 					Traction / 100.0f,
 					GripPercent,
-					Tire->GetSlipAngle());
+					Tire->GetSlipAngle(),
+					Tire->GetSlipRatio()
+					);
 			}
 			//Skip over aerial wheels
 			else

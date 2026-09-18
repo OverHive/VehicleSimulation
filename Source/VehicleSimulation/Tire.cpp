@@ -42,23 +42,38 @@ float UTire::GetBrakingForce() const
 
 float UTire::CalculatePeakSlip(const int Index) const
 {
-	const int i = FMath::Clamp(Index, 0, TireFormulas.Num());
+	//Clamp the index to a useabile range
+	const int FormulaIndex = FMath::Clamp(Index, 0, TireFormulas.Num()-1);
+	//Require a existing a Tire formula to estimate its peak
 	if (TireFormulas.Num() > 0)
 	{
-		MagicFormulaModel SelectedTireFormula = TireFormulas[i];
+		MagicFormulaModel SelectedTireFormula = TireFormulas[FormulaIndex];
 		const float B = SelectedTireFormula.StiffnessFactor;
 		const float C = SelectedTireFormula.ShapeFactor;
 		const float E = SelectedTireFormula.CurvatureFactor;
 		const float Sh = SelectedTireFormula.HorizontalShift;
 
-		// C <= 1 never reaches the sine's peak at finite slip
+		// For a shape factor of  less than one or a negative stiffness factor the tire curve never reaches the sine's peak at finite slip
 		if (B <= 0.0f || C <= 1.0f) return 0.0f;
 
 		const float Target = FMath::Tan(0.5f * PI / C);
 
-		// Seed with the E = 0 solution, then Newton–Raphson
+		//Constrain the curvature factor to 1 or less
+		if (E >= 1.0f)
+		{
+			const float U = 1.0f / FMath::Sqrt(E - 1.0f);
+			const float GMax = U * (1.0f - E) + E* FMath::Atan(U);
+			if (GMax < Target)
+			{
+				return FMath::Max(U / B - Sh, 0.0f);
+			}
+		}
+
+
+		// Seed with the E = 0 solution, estimate the value using Newton–Raphson
+		// over six iterations
 		float X = Target / B;
-		for (int Iter = 0; Iter < 6; ++Iter)
+		for (int i = 0; i < 6; ++i)
 		{
 			const float F = B * X * (1.0f - E) + E * FMath::Atan(B * X) - Target;
 			const float dF = B * (1.0f - E) + E * B / (1.0f + FMath::Square(B * X));
@@ -74,7 +89,7 @@ float UTire::GetPeakSlips(const int Index)
 {
 	if (Index >= 0 && Index < PeakSlips.Num())
 	{
-		return PeakSlips[Index];
+		return PeakSlips[Index]+TireFormulas[Index].HorizontalShift;
 	}
 	return 0.0f;
 }
