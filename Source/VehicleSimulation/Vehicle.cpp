@@ -5,6 +5,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Components/StaticMeshComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h" 
 
 // Sets default values
@@ -78,10 +79,22 @@ void AVehicle::BeginPlay()
 			}
 		}
 	}
+	//Start logging data
+	  // Start the timer
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &AVehicle::LogTelemetry, LogInterval, true);
+}
+void AVehicle::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// Clean up the timer when actor is destroyed
+	GetWorldTimerManager().ClearTimer(TimerHandle);
+
+	Super::EndPlay(EndPlayReason);
 }
 // Called every frame
 void AVehicle::Tick(float DeltaTime)
 {
+
+	TimeBetweenLastFrames = DeltaTime;
 	GEngine->AddOnScreenDebugMessage(17, 3.f, FColor::Purple, FString::Printf(TEXT("Debug mode:%f N"), DebugSetting));
 
 	if (DebugSetting != 0)
@@ -233,7 +246,7 @@ void AVehicle::SuspensionRayCast()
 				Tire->UpdateFrictionCoefficient(Friction);
 			}
 			//Apply the suspension to the model
-			ApplyLocationForce(ForceZ, Tire->GetContactPoint(), true, true,true);
+			ApplyLocationForce(ForceZ, Tire->GetContactPoint(), true, true, true);
 		}
 		else
 		{
@@ -332,6 +345,8 @@ void AVehicle::SetFromPreset(const int Index)
 
 	UpdateStaticLoads();
 	CreateTires();
+	//Setup the the logger for the preset
+	VehicleLogger.ChangeLoggerFile(CurrentPresets.VehicleName);
 }
 
 void AVehicle::Input_Throttle(const FInputActionValue& Value)
@@ -372,12 +387,9 @@ void AVehicle::Input_Gear(const FInputActionValue& Value)
 
 void AVehicle::Input_Pause(const FInputActionValue& Value)
 {
-
 	//Pause the program the first frame the pause button is down
 
 	TogglePauseMenu();
-
-
 }
 
 void AVehicle::UpdateHUD()
@@ -394,6 +406,20 @@ void AVehicle::UpdateHUD()
 	HUDDisplay.WheelHUD(AllTires, [this](UTire* Tire) {return GetTireDriveForce(Tire); });
 	//Display suspension information
 	HUDDisplay.SuspensionHUD(AllTires, PitchAngle, HeavePosition);
+}
+
+void AVehicle::LogTelemetry()
+{
+	// Prevents writing data while the game is in a paused state
+	if (UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		return;
+	}
+	float ForwardAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, PhysicsMesh->GetForwardVector()));
+	float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, PhysicsMesh->GetForwardVector()));
+	VehicleLogger.LogDataToCSV(GetWorld()->GetTimeSeconds(), ForwardVelocity, CurrentThrottle, CurrentBrake,
+		CurrentSteering, CurrentDrag, PitchAngle, HeavePosition,
+		AllTires, TimeBetweenLastFrames, [this](UTire* Tire) {return GetTireDriveForce(Tire); }, [this](UTire* Tire) {return GetTireRollingResistance(Tire, Tire->GetForwardVector(), TimeBetweenLastFrames); });
 }
 
 FVector AVehicle::CreateVehicleTorque(FVector Force, FVector Position)

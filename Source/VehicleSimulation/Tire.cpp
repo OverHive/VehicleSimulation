@@ -42,8 +42,8 @@ float UTire::GetBrakingForce() const
 
 float UTire::CalculatePeakSlip(const int Index) const
 {
-	//Clamp the index to a useabile range
-	const int FormulaIndex = FMath::Clamp(Index, 0, TireFormulas.Num()-1);
+	//Clamp the index to a useable range
+	const int FormulaIndex = FMath::Clamp(Index, 0, TireFormulas.Num() - 1);
 	//Require a existing a Tire formula to estimate its peak
 	if (TireFormulas.Num() > 0)
 	{
@@ -62,7 +62,7 @@ float UTire::CalculatePeakSlip(const int Index) const
 		if (E >= 1.0f)
 		{
 			const float U = 1.0f / FMath::Sqrt(E - 1.0f);
-			const float GMax = U * (1.0f - E) + E* FMath::Atan(U);
+			const float GMax = U * (1.0f - E) + E * FMath::Atan(U);
 			if (GMax < Target)
 			{
 				return FMath::Max(U / B - Sh, 0.0f);
@@ -89,7 +89,7 @@ float UTire::GetPeakSlips(const int Index)
 {
 	if (Index >= 0 && Index < PeakSlips.Num())
 	{
-		return PeakSlips[Index]+TireFormulas[Index].HorizontalShift;
+		return PeakSlips[Index] + TireFormulas[Index].HorizontalShift;
 	}
 	return 0.0f;
 }
@@ -138,9 +138,9 @@ void UTire::UpdateSteering(const float NewAngle)
 	//Only allow steering from the front tires
 	SteerAngle = WheelConfig.IsSteerWheel ? NewAngle : 0;
 	//Rotate the tire to the new steer angle
-	
+
 	if (WheelMesh)
-	WheelMesh->SetRelativeRotation(FRotator(0.0f, SteerAngle, 0.0f));
+		WheelMesh->SetRelativeRotation(FRotator(0.0f, SteerAngle, 0.0f));
 	SetRelativeRotation(FRotator(0.0f, SteerAngle, 0.0f));
 }
 
@@ -242,7 +242,7 @@ float UTire::CalculateSuspensionForce(const float SuspensionVelocity)
 	//The tire also acts like a spring when compressed due to its pressure
 	float TireSpring = TireCompression * SuspensionSettings.TireVerticalStiffness;
 	// Total Force = Spring force + Tire spring force  - Damping (Damping opposes the velocity)
-	SuspensionForce = SpringForce + DampingForce;
+	SuspensionForce = SpringForce + TireSpring - DampingForce;
 	//Clamp the total force to prevent negative values 
 	SuspensionForce = FMath::Max(0.0f, SuspensionForce);
 	return IsGrounded ? SuspensionForce : 0;
@@ -345,7 +345,7 @@ void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude
 float UTire::MagicFormula(const float peakValue, const float x, const int Index) const
 {
 
-	int FormulaIndex = FMath::Clamp(Index, 0, TireFormulas.Num());
+	int FormulaIndex = FMath::Clamp(Index, 0, TireFormulas.Num() - 1);
 	if (TireFormulas.Num() > 0)
 	{
 		return TireFormulas[FormulaIndex].MagicFormula(peakValue, x);

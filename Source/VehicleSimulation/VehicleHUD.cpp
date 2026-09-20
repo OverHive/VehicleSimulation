@@ -24,11 +24,8 @@ void VehicleHUD::BodyHUD(float ForwardVelocity, float LongitudinalAcceleration, 
 			CurrentThrottle, CurrentBrake, CurrentSteering, CurrentSteeringAngle, GearIndex + 1, GearRatio, //1-based for display - 016 acceptance c5 (change 023)
 			CurrentDrag / 100.0f, VehicleWeight / 100.0f, 100 * FrontAxleShare, 100 * RearAxleShare,
 			VehicleMass, VerticalVelocity);
-		//Appendf %s with a TCHAR pointer fails TCheckedFormatString in UE 5.7 - append the name as an FString instead. changes.md 011.
 		VehicleBlock.Appendf(TEXT("\nPreset %d: "), VehiclePresetIndex);
 		VehicleBlock.Append(VehiclePresetName.ToString());
-		//Change 016: engine line - numeric part via Appendf, the cap label via FString Append
-		//(011 lesson: never pass a TCHAR* through the checked-format Appendf path).
 		VehicleBlock.Appendf(TEXT("\nEng drive %0.1f N cap "), CurrentDrivingForce / 100.0f);
 		const FString CapName = EngineCapType == 0 ? FString(TEXT("torque")) : (EngineCapType == 1 ? FString(TEXT("power")) : FString(TEXT("off")));
 		VehicleBlock.Append(CapName);

@@ -9,6 +9,7 @@
 #include "WheelSuspensionSetting.h"
 #include "VehiclePresets.h"
 #include "VehicleHUD.h"
+#include "TelemetryLogger.h"
 #include "Vehicle.generated.h"
 
 UCLASS(BlueprintType, Blueprintable)
@@ -24,6 +25,9 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	//Called when the game ends or when despawned
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -127,6 +131,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 	float SpringStiffness = 8.0f;
 private:
+	//<----------------------------------------------- Vehicle state updaters -------------------------------->
 	//Models vehicle suspension using ray cast
 	void SuspensionRayCast();
 	// This function is called by the Enhanced Input System
@@ -148,7 +153,7 @@ private:
 	//Applies suspension forces to the vehicle
 	void ApplySuspensionForceEffects();
 	//Apply a force through a wheel
-	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction , const bool HasXTorque = false, const bool HasYTorque = false, const bool HasZTorque = false);
+	void ApplyWheelForce(UTire* Tire, float ForceMagnitude, FVector Direction, const bool HasXTorque = false, const bool HasYTorque = false, const bool HasZTorque = false);
 	//Applies a force at location
 	void ApplyLocationForce(FVector Force, FVector Position, const bool HasZTorque = false, const bool HasYTorque = false, const bool HasXTorque = false);
 	//Obtains the static distribution of the vehicle's weight
@@ -171,11 +176,11 @@ private:
 	float CalculateRPM(UTire* Tire) const;
 	//Gets the drive torque on a wheel
 	float GetWheelTorque(UTire* Tire) const;
+	//Creates Torque for the vehicle 
+	FVector CreateVehicleTorque(FVector Force, FVector Position);
+	//<----------------------------------------------- End --------------------------------------------------->
 
-	//Note: Forces must be in  cm/s²
-	float FrontSuspensionForce = 0.0f;
-	float RearSuspensionForce = 0.0f;
-	// Stores the input from the joystick/WASD
+	//<----------------------------------------------- Input data and function ------------------------------->
 	FVector2D CurrentInputDirection;
 	void Input_Throttle(const FInputActionValue& Value);
 	void Input_Steering(const FInputActionValue& Value);
@@ -183,13 +188,14 @@ private:
 	void Input_Debug(const FInputActionValue& Value);
 	void Input_Gear(const FInputActionValue& Value);
 	void Input_Pause(const FInputActionValue& Value);
-	FVector CurrentVelocity = FVector::ZeroVector;
-	FVector LastVelocity = FVector::ZeroVector;
-	FVector Acceleration = FVector::ZeroVector;
-	FVector DefaultVisualMeshPosition = FVector::ZeroVector;
-	FVector MeshScale = FVector(1, 1, 1);
+	//For preventing multiple gear changes a single press 
+	bool IsGearChanging = false;
+	//<----------------------------------------------- End --------------------------------------------------->
+
+	//<-----------------------------------------------Vehicle state ------------------------------------------>
 	int GearIndex = 0;
-	//Debug configuration
+	float FrontSuspensionForce = 0.0f;
+	float RearSuspensionForce = 0.0f;
 	float DebugSetting = 0.0f;
 	float DragPrintSpeedThreshold = 1.0f;
 	float LastFakeAcceleration = 0.0f;
@@ -216,10 +222,15 @@ private:
 	float HeaveVelocity = 0.0f;
 	float FrontDynamicLoad = 0.0f;
 	float RearDynamicLoad = 0.0f;
+	float TargetHeight = 0.0f;
 	bool IsUsingMagicFormula = false;
 	bool IsBraking = false;
 	bool IsPauseButtonDown = false;
-	float TargetHeight = 0.0f;
+	FVector CurrentVelocity = FVector::ZeroVector;
+	FVector LastVelocity = FVector::ZeroVector;
+	FVector Acceleration = FVector::ZeroVector;
+	//<----------------------------------------------- End ------------------------------------------------->
+
 	//<-----------------------------------------------Spawning data ---------------------------------------->
 	FVector SpawnLocation = FVector::ZeroVector;
 	FQuat SpawnDirection = FQuat(0, 0, 0, 0);
@@ -231,10 +242,24 @@ private:
 	void UpdateHUD();
 	//<----------------------------------------------- End ------------------------------------------------->
 
-	FVector MeshDimension = FVector::ZeroVector;
-	//Creates Torque for the vehicle 
-	FVector CreateVehicleTorque(FVector Force, FVector Position);
+	//<----------------------------------------------- Telemetry logging ----------------------------------->
+	TelemetryLogger VehicleLogger;
+	//Logs vehicle telemetry
+	void LogTelemetry();
+	// How often to log (in seconds)
+	UPROPERTY(EditAnywhere, Category = "CSV Settings")
+	float LogInterval = 1.0f;
+	// Timer handle to manage the loop
+	FTimerHandle TimerHandle;
+	float TimeBetweenLastFrames = 0.0f;
+	//<----------------------------------------------- End ------------------------------------------------->
 
-	//For preventing multiple gear changes a single press 
-	bool IsGearChanging = false;
+	//<----------------------------------------------- Mesh Resizing data ---------------------------------->
+
+	FVector MeshDimension = FVector::ZeroVector;
+	FVector DefaultVisualMeshPosition = FVector::ZeroVector;
+	FVector MeshScale = FVector(1, 1, 1);
+	//<----------------------------------------------- End ------------------------------------------------->
+
+
 };
