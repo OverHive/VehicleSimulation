@@ -134,8 +134,6 @@ private:
 	//<----------------------------------------------- Vehicle state updaters -------------------------------->
 	//Models vehicle suspension using ray cast
 	void SuspensionRayCast();
-	// This function is called by the Enhanced Input System
-	void Move(const FInputActionValue& Value);
 	//Setup for the wheels
 	void CreateTires();
 	//Handles the dynamics of the suspension

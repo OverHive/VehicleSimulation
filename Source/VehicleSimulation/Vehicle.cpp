@@ -109,8 +109,6 @@ void AVehicle::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	CurrentSteeringAngle = FMath::FInterpTo(CurrentSteeringAngle, CurrentSteering * MaxSteeringAngle, DeltaTime, SteeringInterpSpeed);
 
-	bool IsThrottleActive = FMath::Abs(CurrentThrottle) > 0.08f;
-	bool IsSteeringActive = FMath::Abs(CurrentSteering) > 0.08f;
 	//Store the current velocity of the last frame
 	LastVelocity = !CurrentVelocity.IsNearlyZero() ? CurrentVelocity : FVector::ZeroVector;
 
@@ -417,7 +415,7 @@ void AVehicle::LogTelemetry()
 	}
 	float ForwardAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, PhysicsMesh->GetForwardVector()));
 	float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, PhysicsMesh->GetForwardVector()));
-	VehicleLogger.LogDataToCSV(GetWorld()->GetTimeSeconds(), ForwardVelocity, CurrentThrottle, CurrentBrake,
+	VehicleLogger.LogDataToCSV(GetWorld()->GetTimeSeconds(), ForwardVelocity, ForwardAcceleration, CurrentThrottle, CurrentBrake,
 		CurrentSteering, CurrentDrag, PitchAngle, HeavePosition,
 		AllTires, TimeBetweenLastFrames, [this](UTire* Tire) {return GetTireDriveForce(Tire); }, [this](UTire* Tire) {return GetTireRollingResistance(Tire, Tire->GetForwardVector(), TimeBetweenLastFrames); });
 }

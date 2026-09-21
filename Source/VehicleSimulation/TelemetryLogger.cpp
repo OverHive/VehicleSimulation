@@ -13,77 +13,68 @@ TelemetryLogger::~TelemetryLogger()
 {
 }
 
-void TelemetryLogger::LogDataToCSV(float Timestamp, float Speed, float Throttle,float Brake, 
-    float Steer, float Drag, float Pitch, float Heave,
-    TArray<UTire*> Tires , float DeltaTime, TFunction <float(UTire* Tire)> TractionFunction, TFunction <float(UTire* Tire)> RollingResistanceFunction)
+void TelemetryLogger::LogDataToCSV(float Timestamp, float Speed, float Acceleration, float Throttle, float Brake,
+	float Steer, float Drag, float Pitch, float Heave,
+	TArray<UTire*> Tires, float DeltaTime, TFunction <float(UTire* Tire)> TractionFunction, TFunction <float(UTire* Tire)> RollingResistanceFunction)
 {
 
 
-    //First get the vehicle body state
-    FString DataLine = FString::Printf(TEXT("%5.1f, %5.1f,%5.1f, %5.1f, %5.1f, %5.1f,%5.1f, %5.1f"), Timestamp, Speed, Throttle, Brake, Steer, Drag, Pitch, Heave);
-    //Then get the state of each wheel
-    for(UTire* &Tire:Tires)
-    {
-        TEXT("FR_Fz, FR_slipRatio, FR_SlipAngle, FR_Fx, FR_Fy, SuspensionForce, FR_RollingResistance, FR_ContactX, FR_ContactY ,FR_ContactZ,");
-        float Fz = Tire->GetTireLoad();
-        float SlipRatio = Tire->GetSlipRatio();
-        float SlipAngle = Tire->GetSlipAngle();
-        float Fx = TractionFunction(Tire);
-        float Fy = Tire->GetLateralForceVector(DeltaTime).Size();
-        float SuspensionForce = Tire->GetSuspensionForce();
-        float RollingResistance = RollingResistanceFunction(Tire);
-        FVector Contact = Tire->GetContactPoint();
-        DataLine += FString::Printf(TEXT(",%5.1f ,%5.1f, %5.1f, %5.1f, %5.1f, %5.1f, %5.1f, %5.1f, %5.1f, %5.1f"), Fz, SlipRatio, SlipAngle, Fx, Fy, SuspensionForce, RollingResistance, Contact.X, Contact.Y, Contact.Z);
-    }
-    // Write the line to the file
-    AppendToFile(DataLine);
+	//First get the vehicle body state
+	FString DataLine = FString::Printf(TEXT("%5.1f, %5.1f,%5.1f,%5.1f, %5.1f, %5.1f, %5.1f,%5.1f, %5.1f"), Timestamp, Speed/100, Acceleration/100, Throttle, Brake, Steer, Drag/100, Pitch, Heave/100);
+	//Then get the state of each wheel
+	for (UTire*& Tire : Tires)
+	{
+		float Fz = Tire->GetTireLoad()/100;
+		float SlipRatio = Tire->GetSlipRatio();
+		float SlipAngle = Tire->GetSlipAngle();
+		float Fx = TractionFunction(Tire)/100;
+		float Fy = Tire->GetLateralForceVector(DeltaTime).Size()/100;
+		float SuspensionForce = Tire->GetSuspensionForce()/100;
+		float RollingResistance = RollingResistanceFunction(Tire)/100;
+		FVector Contact = Tire->GetContactPoint()/100;
+		DataLine += FString::Printf(TEXT(",%5.1f ,%5.1f, %5.1f, %5.1f, %5.1f, %5.1f, %5.1f, %5.1f, %5.1f, %5.1f"), Fz, SlipRatio, SlipAngle, Fx, Fy, SuspensionForce, RollingResistance, Contact.X, Contact.Y, Contact.Z);
+	}
+
+
+	// Ensure the file ends with a newline
+	if (!DataLine.EndsWith(TEXT("\n")))
+	{
+		DataLine.Append(TEXT("\n"));
+	}
+
+	// Write the line to the file
+
+	AppendToFile(DataLine);
 }
 
 void TelemetryLogger::AppendToFile(const FString& Line)
 {
-    //Load the content of the file
-    FString ExistingTelemetry;
-    if (!FFileHelper::LoadFileToString(ExistingTelemetry, *FullFilePath))
-    {
-        return;
-    }
-    // Ensure proper newline handling
-    if (!ExistingTelemetry.IsEmpty() && !ExistingTelemetry.EndsWith(TEXT("\n")))
-    {
-        ExistingTelemetry.Append(TEXT("\n"));
-    }
+	//Ensure the files exists before appending to it
+	InitialiseLoggerCSV();
 
-    // Append the new line
-    ExistingTelemetry.Append(Line);
 
-    // Ensure the file ends with a newline
-    if (!ExistingTelemetry.EndsWith(TEXT("\n")))
-    {
-        ExistingTelemetry.Append(TEXT("\n"));
-    }
-    // Save the content
-    FFileHelper::SaveStringToFile(ExistingTelemetry, *FullFilePath);
+	FFileHelper::SaveStringToFile(Line, *FullFilePath,FFileHelper::EEncodingOptions::AutoDetect,&IFileManager::Get(), FILEWRITE_Append);
 }
 
 void TelemetryLogger::ChangeLoggerFile(const FName VehiclePresetName)
 {
 	CurrentLoggingFile = VehiclePresetName.ToString() + ".csv";
-	FullFilePath = FPaths::ProjectSavedDir() / TEXT("Telemetry")/CurrentLoggingFile;
-    //Ensure that there is a file to write to
-    InitialiseLoggerCSV();
+	FullFilePath = FPaths::ProjectSavedDir() / TEXT("Telemetry") / CurrentLoggingFile;
+	//Ensure that there is a file to write to
+	InitialiseLoggerCSV();
 }
 
 void TelemetryLogger::InitialiseLoggerCSV()
 {
-    // Create the file csv if  does not exist
-    if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*FullFilePath))
-    {
-        // Create header:
-        FString Header = TEXT("Timestamp, Speed, Throttle, Brake, Steer, Drag, Pitch, Heave,");
-            Header += TEXT("FR_Fz, FR_slipRatio, FR_SlipAngle, FR_Fx, FR_Fy, SuspensionForce, FR_RollingResistance, FR_ContactX, FR_ContactY ,FR_ContactZ,");
-            Header += TEXT("FL_Fz, FL_slipRatio, FL_SlipAngle, FL_Fx, FL_Fy, SuspensionForce, FL_RollingResistance, FL_ContactX, FL_ContactY ,FL_ContactZ,");
-            Header += TEXT("RR_Fz, RR_slipRatio, RR_SlipAngle, RR_Fx, RR_Fy, SuspensionForce, RR_RollingResistance, RR_ContactX, RR_ContactY ,RR_ContactZ,");
-            Header += TEXT("RL_Fz, RL_slipRatio, RL_SlipAngle, RL_Fx, RL_Fy, SuspensionForce, RL_RollingResistance, RL_ContactX, RL_ContactY ,RL_ContactZ\n");
-        FFileHelper::SaveStringToFile(Header, *FullFilePath);
-    }
+	// Create the file csv if  does not exist
+	if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*FullFilePath))
+	{
+		// Create header:
+		FString Header = TEXT("Timestamp (s), Speed (m/s), Acceleration(m/s^2),Throttle, Brake, Steer, Drag (N), Pitch (degrees), Heave (m),");
+		Header += TEXT("FR_Fz (N), FR_slipRatio, FR_SlipAngle (degrees), FR_Fx (N), FR_Fy (N), FR_SuspensionForce (N), FR_RollingResistance (N), FR_ContactX, FR_ContactY (m), FR_ContactZ (m),");
+		Header += TEXT("FL_Fz (N), FL_slipRatio, FL_SlipAngle (degrees), FL_Fx (N), FL_Fy (N), FL_SuspensionForce (N), FL_RollingResistance (N), FL_ContactX, FL_ContactY (m), FL_ContactZ (m),");
+		Header += TEXT("RR_Fz (N), RR_slipRatio, RR_SlipAngle (degrees), RR_Fx (N), RR_Fy (N), RR_SuspensionForce (N), RR_RollingResistance (N), RR_ContactX, RR_ContactY (m), RR_ContactZ (m),");
+		Header += TEXT("RL_Fz (N), RL_slipRatio, RL_SlipAngle (degrees), RL_Fx (N), RL_Fy (N), RL_SuspensionForce (N), RL_RollingResistance (N), RL_ContactX, RL_ContactY (m), RL_ContactZ (m)\n");
+		FFileHelper::SaveStringToFile(Header, *FullFilePath);
+	}
 }
