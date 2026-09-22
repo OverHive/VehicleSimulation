@@ -53,7 +53,8 @@ float UTire::CalculatePeakSlip(const int Index) const
 		const float E = SelectedTireFormula.CurvatureFactor;
 		const float Sh = SelectedTireFormula.HorizontalShift;
 
-		// For a shape factor of  less than one or a negative stiffness factor the tire curve never reaches the sine's peak at finite slip
+		// For a shape factor of  less than one or a negative stiffness factor the tire 
+		// curve never reaches the sine's peak at finite slip
 		if (B <= 0.0f || C <= 1.0f) return 0.0f;
 
 		const float Target = FMath::Tan(0.5f * PI / C);
@@ -68,7 +69,6 @@ float UTire::CalculatePeakSlip(const int Index) const
 				return FMath::Max(U / B - Sh, 0.0f);
 			}
 		}
-
 
 		// Seed with the E = 0 solution, estimate the value using Newton–Raphson
 		// over six iterations
@@ -311,20 +311,25 @@ void UTire::UpdateWheelRotationalVelocity(const float LongitudinalForceMagnitude
 			//The direction of the throttle
 			float ThrottleSign = FMath::Sign(LongitudinalForceMagnitude);
 
-			//If the wheel's rotational velocity needs to be increased and there is a force for doing so accelerate the wheel
-			if (ThrottleSign == RotationSign && CorrectiveSign == RotationSign && LongitudinalForceMagnitude != 0)
+			//If the wheel's rotational velocity needs to be increased and there is a
+			//force for doing so accelerate the wheel
+			if (ThrottleSign == RotationSign && CorrectiveSign == RotationSign
+				&& LongitudinalForceMagnitude != 0)
 			{
 				Multiplier = FMath::Min(FMath::Abs(CorrectiveForce / (LongitudinalForceMagnitude)), 1);
 			}
-			//If the wheel's rotational velocity needs to be reduced pulse the brakes and reduce the throttle if needed
+			//If the wheel's rotational velocity needs to be reduced pulse the brakes
+			// and reduce the throttle if needed
 			else if (CorrectiveSign * -1 == RotationSign && AvailableBrakingForce != 0)
 			{
 				//Calculate the maximum force we need or can give for decelerating the wheel
 				ResistiveForce = FMath::Min(FMath::Abs(CorrectiveForce), AvailableBrakingForce);
 				//If the total corrective force needed force exceeds the pulsing force reduce the throttle
-				if (AvailableBrakingForce < LongitudinalForceMagnitude + FMath::Abs(CorrectiveForce) && CorrectiveSign == ThrottleSign * -1 && LongitudinalForceMagnitude != 0)
+				if (AvailableBrakingForce < LongitudinalForceMagnitude + FMath::Abs(CorrectiveForce) 
+					&& CorrectiveSign == ThrottleSign * -1 && LongitudinalForceMagnitude != 0)
 				{
-					Multiplier = FMath::Max(0, (AvailableBrakingForce - FMath::Abs(CorrectiveForce)) / FMath::Abs(LongitudinalForceMagnitude));
+					Multiplier = FMath::Max(0, (AvailableBrakingForce - FMath::Abs(CorrectiveForce)) 
+						/ FMath::Abs(LongitudinalForceMagnitude));
 				}
 			}
 			//Calculate the acceleration

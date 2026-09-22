@@ -84,7 +84,8 @@ struct VEHICLESIMULATION_API FCarSettings
 		const float NewFrontTireVerticalStiffness, const float NewRearTireVerticalStiffness, const float NewFrontWheelRadius, const float NewRearWheelRadius,
 		const float NewFrontTireFriction, const float NewRearTireFriction, const float NewHeaveDamping, TMap <float, float> NewTorqueCurve, float const NewCurveStep
 		, const float NewMaximumRPM, const float NewMinimumStartingRPM, const float NewFrontRollingResistanceCoefficient, const float NewRearRollingResistanceCoefficient,
-		const float NewFrontWheelInertia, const float NewRearWheelInertia, const float NewFrontBrakeTorque, const float NewRearBrakeTorque,const TArray<MagicFormulaModel> NewTireFormulas, const TMap <FName, FWheelConfiguration> NewWheelConfigurations)
+		const float NewFrontWheelInertia, const float NewRearWheelInertia, const float NewFrontBrakeTorque, const float NewRearBrakeTorque,const TArray<MagicFormulaModel> NewTireFormulas,
+		const TMap <FName, FWheelConfiguration> NewWheelConfigurations)
 	{
 		MinimumStartingRPM = NewMinimumStartingRPM;
 		VehicleName = NewVehicleName;
@@ -120,7 +121,7 @@ struct VEHICLESIMULATION_API FCarSettings
 		//Convert from m^2 to cm^2
 		PitchInertia = NewPitchInertia * 10000;
 		PitchStiffness = NewPitchStiffness * 10000;
-		PitchDamping = NewPitchDamping * 10000;
+		PitchDamping = NewPitchDamping * 1000;
 		FrontWheelInertia = NewFrontWheelInertia * 10000;
 		RearWheelInertia = NewRearWheelInertia * 10000;
 		FrontBrakeTorque = NewFrontBrakeTorque * 10000;

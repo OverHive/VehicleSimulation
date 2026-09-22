@@ -141,7 +141,7 @@ private:
 	//Calculates the resistive force
 	void CalculateResistiveForces(FVector Velocity, float DeltaTime);
 	//Calculates pitch weight transfer effects
-	void CalculatePitchWeightTransfer(const float LongitudionalAcceleration, const float LateralAcceleration);
+	void CalculateWeightTransfer(const float LongitudionalAcceleration, const float LateralAcceleration);
 	//Handles unsprung mass dynamics
 	void CalculateUnsprungMassDynamics(float DeltaTime);
 	// Handles pitch dynamics
