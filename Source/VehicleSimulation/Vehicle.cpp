@@ -80,7 +80,6 @@ void AVehicle::BeginPlay()
 		}
 	}
 	//Start logging data
-	  // Start the timer
 	GetWorldTimerManager().SetTimer(TimerHandle, this, &AVehicle::LogTelemetry, LogInterval, true);
 }
 void AVehicle::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -95,7 +94,6 @@ void AVehicle::Tick(float DeltaTime)
 {
 
 	TimeBetweenLastFrames = DeltaTime;
-	GEngine->AddOnScreenDebugMessage(17, 3.f, FColor::Purple, FString::Printf(TEXT("Debug mode:%f N"), DebugSetting));
 
 	if (DebugSetting != 0)
 	{
@@ -176,6 +174,8 @@ void AVehicle::Tick(float DeltaTime)
 				}
 				//Update the current driving force
 				CurrentDrivingForce += LongitudinalForce;
+				//Store the force on the wheel for telemetry
+				Tire->UpdateLastLongitudinalForce(LongitudinalForce);
 				ApplyWheelForce(Tire, LongitudinalForce, WheelForward, false, false, true);
 
 				//Apply the lateral friction force
@@ -234,7 +234,6 @@ void AVehicle::SuspensionRayCast()
 
 			//Store the hit location and normal
 			Tire->StoreTireContactInformation(Hit);
-			Tire->UpdateRollingRadius(StartLocation);
 
 			// Update the tire friction
 			UPhysicalMaterial* PhysMat = Hit.PhysMaterial.Get();
@@ -419,7 +418,7 @@ void AVehicle::LogTelemetry()
 	float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, PhysicsMesh->GetForwardVector()));
 	VehicleLogger.LogDataToCSV(GetWorld()->GetTimeSeconds(), ForwardVelocity, ForwardAcceleration, CurrentThrottle, CurrentBrake,
 		CurrentSteering, CurrentDrag, PitchAngle, HeavePosition,
-		AllTires, TimeBetweenLastFrames, [this](UTire* Tire) {return GetTireDriveForce(Tire); }, [this](UTire* Tire) {return GetTireRollingResistance(Tire, Tire->GetForwardVector(), TimeBetweenLastFrames); });
+		AllTires, TimeBetweenLastFrames, [this](UTire* Tire) {return GetTireRollingResistance(Tire, Tire->GetForwardVector(), TimeBetweenLastFrames); });
 }
 
 FVector AVehicle::CreateVehicleTorque(FVector Force, FVector Position)

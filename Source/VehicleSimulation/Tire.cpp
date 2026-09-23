@@ -170,13 +170,6 @@ void UTire::UpdateSlipAngle(const float LongitudinalVelocity, const float Latera
 	SlipAngle = FMath::Atan2(LateralVelocity, Denominator);
 	LastLateralVelocity = LateralVelocity;
 }
-void UTire::UpdateRollingRadius(FVector AxisPosition)
-{
-	RollingRadius = SuspensionSettings.WheelRadius;
-	/*	SuspensionSettings.WheelRadius+ !ContactPoint.IsNearlyZero() && IsGrounded
-		? FMath::Abs(AxisPosition.Z - ContactPoint.Z)
-		: SuspensionSettings.WheelRadius;*/
-}
 
 void UTire::UpdateWheelFeatures(const TArray<MagicFormulaModel> NewTireFormulas)
 {
@@ -227,9 +220,6 @@ float UTire::CalculateCompression(const float CurrentDistance)
 	//Calculate the spring compression using the difference between the suspension 
 	//length and the bottom of the wheel
 	SuspensionCompression = FMath::Max(0.0f, SuspensionSettings.RestPosition + CurrentDistance);
-	//Get the compression of the tire using by dividing the TireLoad by the tire Stiffness
-	TireCompression = FMath::Max(0.0f, SuspensionSettings.TireVerticalStiffness != 0 ? TireLoad
-		/ SuspensionSettings.TireVerticalStiffness : 0);
 	return SuspensionCompression;
 }
 
@@ -239,10 +229,8 @@ float UTire::CalculateSuspensionForce(const float SuspensionVelocity)
 	float SpringForce = SuspensionCompression * SuspensionSettings.SpringStiffness;
 	//Damping = suspension velocity* Damping coefficient
 	float DampingForce = SuspensionVelocity * SuspensionSettings.DampingCoefficient;
-	//The tire also acts like a spring when compressed due to its pressure
-	float TireSpring = TireCompression * SuspensionSettings.TireVerticalStiffness;
-	// Total Force = Spring force + Tire spring force  - Damping (Damping opposes the velocity)
-	SuspensionForce = SpringForce + TireSpring - DampingForce;
+	// Total Force = Spring force - Damping (Damping opposes the velocity)
+	SuspensionForce = SpringForce - DampingForce;
 	//Clamp the total force to prevent negative values 
 	SuspensionForce = FMath::Max(0.0f, SuspensionForce);
 	return IsGrounded ? SuspensionForce : 0;

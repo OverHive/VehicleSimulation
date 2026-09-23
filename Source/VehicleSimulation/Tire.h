@@ -60,8 +60,8 @@ public:
 	float MagicFormula(const float value, const float x, const int Index) const;
 	//Returns the tire's slip angle
 	float GetSlipAngle() const { return SlipAngle; };
-	//Returns the rolling radius of wheel
-	float GetRollingRadius() const { return RollingRadius; };
+	//Returns the radius of wheel
+	float GetWheelRadius() const { return SuspensionSettings.WheelRadius; };
 	//Return the braking force of the tire
 	float GetBrakingForce() const;
 	//Get the inertia of the wheels
@@ -70,6 +70,8 @@ public:
 	float CalculatePeakSlip(const int Index) const;
 	//Returns peak slip values
 	float GetPeakSlips(const int Index);
+	//Returns the last longitudinal force on the wheel
+	float GetLastLongitudinalForce() { return LastLongitudinalForce; };
 	//Returns the maximum grip
 	const float GetMaxGrip() { return MaxGrip; };
 	//Returns the lateral force on the tire
@@ -98,8 +100,6 @@ public:
 	void UpdateTireLoad(float NormalForce);
 	//Updates the tire's angle ratio
 	void UpdateSlipAngle(const float velocityY, const float velocityX);
-	//Calculates the rolling radius of the wheel
-	void UpdateRollingRadius(FVector AxisPosition);
 	//Update the wheel's Inertia
 	void UpdateWheelInertia(float NewInertia) { Inertia = NewInertia; };
 	//Updates the braking torque of the wheel
@@ -116,6 +116,8 @@ public:
 	void StoreInitialTireMeshDimensions();
 	//Reset the rotational velocity of the wheel
 	void ResetRotationalVelocity() { WheelRotationalVelocity = 0; }
+	//Updates the last longitudinal force on the wheel
+	void UpdateLastLongitudinalForce(const float Force) { LastLongitudinalForce= Force; };
 	//Gets the wheel's contact point
 	FVector GetContactPoint() const { return ContactPoint; }
 	//Returns the direction of the normal force on the wheel 
@@ -143,7 +145,6 @@ private:
 	void UpdateTotalGrip() { TireGrip = FrictionCoefficient + TireFrictionCoefficient; };
 	FVector ContactPoint = FVector::ZeroVector;
 	FVector ContacNormal = FVector::ZeroVector;
-	float RollingRadius = 0.0f;
 	float FrictionCoefficient = 1.4f;
 	float TireFrictionCoefficient = 1.4f;
 	float TireGrip = 1.4f;
@@ -158,9 +159,9 @@ private:
 	float SuspensionForce = 0;
 	float NormalForce = 0.0f;
 	float BrakingTorque = 0;
-	float TireCompression = 0.0f;
 	float SuspensionCompression = 0.0f;
 	float LastLateralVelocity = 0;
+	float LastLongitudinalForce = 0;
 	const float MinSlipSpeed = 20.0f;
 	FVector WheelMeshDimension = FVector::ZeroVector;
 	FVector WheelPosition = FVector::ZeroVector;

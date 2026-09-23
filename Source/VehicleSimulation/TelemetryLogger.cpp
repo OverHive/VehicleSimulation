@@ -15,7 +15,7 @@ TelemetryLogger::~TelemetryLogger()
 
 void TelemetryLogger::LogDataToCSV(float Timestamp, float Speed, float Acceleration, float Throttle, float Brake,
 	float Steer, float Drag, float Pitch, float Heave,
-	TArray<UTire*> Tires, float DeltaTime, TFunction <float(UTire* Tire)> TractionFunction, TFunction <float(UTire* Tire)> RollingResistanceFunction)
+	TArray<UTire*> Tires, float DeltaTime, TFunction <float(UTire* Tire)> RollingResistanceFunction)
 {
 
 
@@ -27,7 +27,7 @@ void TelemetryLogger::LogDataToCSV(float Timestamp, float Speed, float Accelerat
 		float Fz = Tire->GetTireLoad()/100;
 		float SlipRatio = Tire->GetSlipRatio();
 		float SlipAngle = Tire->GetSlipAngle();
-		float Fx = TractionFunction(Tire)/100;
+		float Fx = Tire->GetLastLongitudinalForce();
 		float Fy = Tire->GetLateralForceVector(DeltaTime).Size()/100;
 		float SuspensionForce = Tire->GetSuspensionForce()/100;
 		float RollingResistance = RollingResistanceFunction(Tire)/100;
@@ -71,10 +71,10 @@ void TelemetryLogger::InitialiseLoggerCSV()
 	{
 		// Create header:
 		FString Header = TEXT("Timestamp (s), Speed (m/s), Acceleration(m/s^2),Throttle, Brake, Steer, Drag (N), Pitch (degrees), Heave (m),");
-		Header += TEXT("FR_Fz (N), FR_slipRatio, FR_SlipAngle (degrees), FR_Fx (N), FR_Fy (N), FR_SuspensionForce (N), FR_RollingResistance (N), FR_ContactX, FR_ContactY (m), FR_ContactZ (m),");
-		Header += TEXT("FL_Fz (N), FL_slipRatio, FL_SlipAngle (degrees), FL_Fx (N), FL_Fy (N), FL_SuspensionForce (N), FL_RollingResistance (N), FL_ContactX, FL_ContactY (m), FL_ContactZ (m),");
-		Header += TEXT("RR_Fz (N), RR_slipRatio, RR_SlipAngle (degrees), RR_Fx (N), RR_Fy (N), RR_SuspensionForce (N), RR_RollingResistance (N), RR_ContactX, RR_ContactY (m), RR_ContactZ (m),");
-		Header += TEXT("RL_Fz (N), RL_slipRatio, RL_SlipAngle (degrees), RL_Fx (N), RL_Fy (N), RL_SuspensionForce (N), RL_RollingResistance (N), RL_ContactX, RL_ContactY (m), RL_ContactZ (m)\n");
+		Header += TEXT("FR_Fz (N), FR_slipRatio, FR_SlipAngle (degrees), FR_Fx (N), FR_Fy (N), FR_SuspensionForce (N), FR_RollingResistance (N), FR_ContactX (m), FR_ContactY (m), FR_ContactZ (m),");
+		Header += TEXT("FL_Fz (N), FL_slipRatio, FL_SlipAngle (degrees), FL_Fx (N), FL_Fy (N), FL_SuspensionForce (N), FL_RollingResistance (N), FL_ContactX (m), FL_ContactY (m), FL_ContactZ (m),");
+		Header += TEXT("RR_Fz (N), RR_slipRatio, RR_SlipAngle (degrees), RR_Fx (N), RR_Fy (N), RR_SuspensionForce (N), RR_RollingResistance (N), RR_ContactX (m), RR_ContactY (m), RR_ContactZ (m),");
+		Header += TEXT("RL_Fz (N), RL_slipRatio, RL_SlipAngle (degrees), RL_Fx (N), RL_Fy (N), RL_SuspensionForce (N), RL_RollingResistance (N), RL_ContactX (m), RL_ContactY (m), RL_ContactZ (m)\n");
 		FFileHelper::SaveStringToFile(Header, *FullFilePath);
 	}
 }
