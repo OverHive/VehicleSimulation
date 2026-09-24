@@ -29,11 +29,12 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	//<----------------------------------------------- Menu functions----------------------------------------->
 	UFUNCTION(BlueprintCallable, Category = "Preset")
 	//Returns the vehicle to its initial orientation and position
 	void ResetVehiclePosition();
@@ -44,9 +45,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Menu")
 	//Toggles the menu from a blueprint
 	void BlueprintTogglePauseMenu();
+	//Resets the state of the vehicle
+	void ResetState();
 	UFUNCTION(BlueprintCallable, Category = "Menu")
 	//Gets the current index of the preset 
 	float GetPresetIndex() { return PresetIndex; };
+
+	//<----------------------------------------------- End ------------------------------------------------->
+
 	//<----------------------------------------------- Preset variables ------------------------------------>
 	//Applies a preset to the vehicle
 	UFUNCTION(BlueprintCallable, Category = "Preset")
@@ -88,8 +94,6 @@ public:
 	UInputAction* GearAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	UInputAction* DebugAction;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* PauseAction;
 	//<----------------------------------------------- End ------------------------------------------------->
 
@@ -106,7 +110,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Steering")
 	float SteeringInterpSpeed = 20.0f;
-	//The vehicle's tires and their properties
+
+
+	//<----------------------------------------------- Vehicle's tire------------------------------------------>
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
 	UTire* FrontLeftTire;
@@ -121,7 +127,7 @@ public:
 	UTire* RearRightTire;
 	UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "Tires")
 	TArray<UTire*> AllTires;
-
+	//<----------------------------------------------- End --------------------------------------------------->
 	UPROPERTY(EditAnywhere, Category = "Suspension")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
@@ -183,7 +189,6 @@ private:
 	void Input_Throttle(const FInputActionValue& Value);
 	void Input_Steering(const FInputActionValue& Value);
 	void Input_Brake(const FInputActionValue& Value);
-	void Input_Debug(const FInputActionValue& Value);
 	void Input_Gear(const FInputActionValue& Value);
 	void Input_Pause(const FInputActionValue& Value);
 	//For preventing multiple gear changes a single press 
@@ -194,10 +199,6 @@ private:
 	int GearIndex = 0;
 	float FrontSuspensionForce = 0.0f;
 	float RearSuspensionForce = 0.0f;
-	float DebugSetting = 0.0f;
-	float DragPrintSpeedThreshold = 1.0f;
-	float LastFakeAcceleration = 0.0f;
-	float FakeAcceleration = -5.0f;
 	float CurrentThrottle = 0.0f;
 	float CurrentSteering = 0.0f;
 	float CurrentBrake = 0.0f;

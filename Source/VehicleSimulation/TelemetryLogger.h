@@ -15,7 +15,7 @@ public:
 	~TelemetryLogger();
 
     // The function that will be called by the timer
-    void LogDataToCSV(float Timestamp, float Speed, float Acceleration, float Throttle, float Brake,
+    void LogDataToCSV(float Timestamp, float Speed, float AccelerationX, float AccelerationY, float Throttle, float Brake,
         float Steer, float Drag, float Pitch, float Heave, 
         TArray<UTire*> Tires, float DeltaTime, TFunction <float(UTire* Tire)> RollingResistanceFunction);
 

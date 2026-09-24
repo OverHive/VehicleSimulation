@@ -13,14 +13,14 @@ TelemetryLogger::~TelemetryLogger()
 {
 }
 
-void TelemetryLogger::LogDataToCSV(float Timestamp, float Speed, float Acceleration, float Throttle, float Brake,
+void TelemetryLogger::LogDataToCSV(float Timestamp, float Speed, float AccelerationX, float AccelerationY, float Throttle, float Brake,
 	float Steer, float Drag, float Pitch, float Heave,
 	TArray<UTire*> Tires, float DeltaTime, TFunction <float(UTire* Tire)> RollingResistanceFunction)
 {
 
 
 	//First get the vehicle body state
-	FString DataLine = FString::Printf(TEXT("%5.1f, %5.1f,%5.1f,%5.1f, %5.1f, %5.1f, %5.1f,%5.1f, %5.1f"), Timestamp, Speed/100, Acceleration/100, Throttle, Brake, Steer, Drag/100, Pitch, Heave/100);
+	FString DataLine = FString::Printf(TEXT("%5.1f, %5.1f,%5.1f,%5.1f, %5.1f, %5.1f, %5.1f,%5.1f, %5.1f, %5.1f"), Timestamp, Speed/100, AccelerationX/100, AccelerationY / 100, Throttle, Brake, Steer, Drag/100, Pitch, Heave/100);
 	//Then get the state of each wheel
 	for (UTire*& Tire : Tires)
 	{
@@ -70,7 +70,7 @@ void TelemetryLogger::InitialiseLoggerCSV()
 	if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*FullFilePath))
 	{
 		// Create header:
-		FString Header = TEXT("Timestamp (s), Speed (m/s), Acceleration(m/s^2),Throttle, Brake, Steer, Drag (N), Pitch (degrees), Heave (m),");
+		FString Header = TEXT("Timestamp (s), Speed (m/s), AccelerationX(m/s^2), AccelerationY(m/s^2),Throttle, Brake, Steer, Drag (N), Pitch (degrees), Heave (m),");
 		Header += TEXT("FR_Fz (N), FR_slipRatio, FR_SlipAngle (degrees), FR_Fx (N), FR_Fy (N), FR_SuspensionForce (N), FR_RollingResistance (N), FR_ContactX (m), FR_ContactY (m), FR_ContactZ (m),");
 		Header += TEXT("FL_Fz (N), FL_slipRatio, FL_SlipAngle (degrees), FL_Fx (N), FL_Fy (N), FL_SuspensionForce (N), FL_RollingResistance (N), FL_ContactX (m), FL_ContactY (m), FL_ContactZ (m),");
 		Header += TEXT("RR_Fz (N), RR_slipRatio, RR_SlipAngle (degrees), RR_Fx (N), RR_Fy (N), RR_SuspensionForce (N), RR_RollingResistance (N), RR_ContactX (m), RR_ContactY (m), RR_ContactZ (m),");

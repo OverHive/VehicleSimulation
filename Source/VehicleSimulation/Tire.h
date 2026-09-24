@@ -151,13 +151,10 @@ private:
 	float SlipRatio = 0.0;
 	float SlipAngle = 0.0;
 
-
 	float MaxGrip = 0.5;
 	float WheelDamper = 0.98f;
-	float CouplingFactor = 0.1f;
 	float WheelRotationalVelocity = 0.0f;
 	float SuspensionForce = 0;
-	float NormalForce = 0.0f;
 	float BrakingTorque = 0;
 	float SuspensionCompression = 0.0f;
 	float LastLateralVelocity = 0;

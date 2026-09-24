@@ -95,12 +95,6 @@ void AVehicle::Tick(float DeltaTime)
 
 	TimeBetweenLastFrames = DeltaTime;
 
-	if (DebugSetting != 0)
-	{
-		FakeAcceleration += DebugSetting > 0 ? 1 : -1;
-		DebugSetting = 0;
-	}
-
 	float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, PhysicsMesh->GetForwardVector() * 0.036));
 	IsUsingMagicFormula = ForwardVelocity > FormulaThreshold;
 
@@ -278,13 +272,7 @@ void AVehicle::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 			EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Triggered, this, &AVehicle::Input_Brake);
 			EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Completed, this, &AVehicle::Input_Brake);
 		}
-		if (DebugAction)
-		{
-			// Bind Debug
-			EnhancedInputComponent->BindAction(DebugAction, ETriggerEvent::Triggered, this, &AVehicle::Input_Debug);
-			EnhancedInputComponent->BindAction(DebugAction, ETriggerEvent::Completed, this, &AVehicle::Input_Debug);
-		}
-		if (DebugAction)
+		if (GearAction)
 		{
 			// Bind Gear change
 			EnhancedInputComponent->BindAction(GearAction, ETriggerEvent::Triggered, this, &AVehicle::Input_Gear);
@@ -303,17 +291,26 @@ void AVehicle::ResetVehiclePosition()
 {
 	SetActorLocation(SpawnLocation);
 	SetActorRotation(SpawnDirection);
+	ResetState();
+}
+
+void AVehicle::BlueprintTogglePauseMenu()
+{
+	TogglePauseMenu();
+}
+
+void AVehicle::ResetState()
+{
 	PhysicsMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
 	PhysicsMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
 	for (UTire* Tire : AllTires)
 	{
 		Tire->ResetRotationalVelocity();
 	}
-}
-
-void AVehicle::BlueprintTogglePauseMenu()
-{
-	TogglePauseMenu();
+	HeavePosition = 0;
+	HeaveVelocity = 0;
+	PitchAngle = 0;
+	PitchVelocity = 0;
 }
 
 void AVehicle::SetFromPreset(const int Index)
@@ -345,6 +342,7 @@ void AVehicle::SetFromPreset(const int Index)
 	CreateTires();
 	//Setup the the logger for the preset
 	VehicleLogger.ChangeLoggerFile(CurrentPresets.VehicleName);
+	ResetState();
 }
 
 void AVehicle::Input_Throttle(const FInputActionValue& Value)
@@ -360,10 +358,6 @@ void AVehicle::Input_Steering(const FInputActionValue& Value)
 void AVehicle::Input_Brake(const FInputActionValue& Value)
 {
 	CurrentBrake = Value.Get<float>();
-}
-void AVehicle::Input_Debug(const FInputActionValue& Value)
-{
-	DebugSetting = Value.Get<float>();
 }
 void AVehicle::Input_Gear(const FInputActionValue& Value)
 {
@@ -415,8 +409,9 @@ void AVehicle::LogTelemetry()
 		return;
 	}
 	float ForwardAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, PhysicsMesh->GetForwardVector()));
+	float LateralAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, GetActorRightVector()));
 	float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, PhysicsMesh->GetForwardVector()));
-	VehicleLogger.LogDataToCSV(GetWorld()->GetTimeSeconds(), ForwardVelocity, ForwardAcceleration, CurrentThrottle, CurrentBrake,
+	VehicleLogger.LogDataToCSV(GetWorld()->GetTimeSeconds(), ForwardVelocity, ForwardAcceleration, LateralAcceleration, CurrentThrottle, CurrentBrake,
 		CurrentSteering, CurrentDrag, PitchAngle, HeavePosition,
 		AllTires, TimeBetweenLastFrames, [this](UTire* Tire) {return GetTireRollingResistance(Tire, Tire->GetForwardVector(), TimeBetweenLastFrames); });
 }
