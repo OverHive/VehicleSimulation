@@ -19,7 +19,7 @@ public:
 		float GearRatio, float FrontAxleShare, float RearAxleShare, float VehicleMass, float VerticalVelocity, float VehicleWeight,
 		int VehiclePresetIndex,FName VehiclePresetName,float CurrentDrivingForce,float EngineCapType);
 	//Displays data related to the wheels
-	void WheelHUD(TArray<UTire*> Tires, TFunction <float(UTire* Tire)> TractionFunction);
+	void WheelHUD(TArray<UTire*> Tires);
 	//Displays data related to the suspension
 	void SuspensionHUD(TArray<UTire*> Tires, float PitchAngle, float HeavePosition);
 	~VehicleHUD();

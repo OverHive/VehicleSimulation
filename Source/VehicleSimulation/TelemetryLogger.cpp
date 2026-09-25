@@ -27,8 +27,8 @@ void TelemetryLogger::LogDataToCSV(float Timestamp, float Speed, float Accelerat
 		float Fz = Tire->GetTireLoad()/100;
 		float SlipRatio = Tire->GetSlipRatio();
 		float SlipAngle = Tire->GetSlipAngle();
-		float Fx = Tire->GetLastLongitudinalForce();
-		float Fy = Tire->GetLateralForceVector(DeltaTime).Size()/100;
+		float Fx = Tire->GetLastLongitudinalForce() / 100;
+		float Fy = Tire->GetLastLateralForce()/100;
 		float SuspensionForce = Tire->GetSuspensionForce()/100;
 		float RollingResistance = RollingResistanceFunction(Tire)/100;
 		FVector Contact = Tire->GetContactPoint()/100;

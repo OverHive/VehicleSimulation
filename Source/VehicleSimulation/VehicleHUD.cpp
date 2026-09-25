@@ -33,7 +33,7 @@ void VehicleHUD::BodyHUD(float ForwardVelocity, float LongitudinalAcceleration, 
 	}
 }
 
-void VehicleHUD::WheelHUD(TArray<UTire*> Tires, TFunction <float(UTire* Tire)> TractionFunction)
+void VehicleHUD::WheelHUD(TArray<UTire*> Tires)
 {
 	//Key 102 - per-wheel table.
 	if (GEngine)
@@ -52,9 +52,13 @@ void VehicleHUD::WheelHUD(TArray<UTire*> Tires, TFunction <float(UTire* Tire)> T
 			if (Tire->IsGrounded)
 			{
 				//Get the traction for the wheel
-				const float Traction = TractionFunction(Tire);
+				const float Traction = Tire->GetLastLongitudinalForce();
+				//Get the lateral friction for the wheel
+				const float LateralFriction = Tire->GetLastLateralForce();
+				//Get the combined slip friction for the wheel
+				const float CombinedSlip = FMath::Sqrt(FMath::Pow(Traction, 2) + FMath::Pow(LateralFriction, 2));
 				//Calculate the grip remaining
-				const float GripPercent = Tire->GetMaxGrip() > 0.0f ? FMath::Abs(Traction) / Tire->GetMaxGrip() * 100.0f : 0.0f;
+				const float GripPercent = Tire->GetMaxGrip() > 0.0f ? CombinedSlip / Tire->GetMaxGrip() * 100.0f : 0.0f;
 				WheelsBlock.Appendf(TEXT("\n%s  Y %5.1f %7.1f %7.1f %+7.1f %5.1f%% %6.1f,%6.1f"),
 					Label,
 					Tire->GetCompression(),

@@ -168,8 +168,8 @@ void AVehicle::Tick(float DeltaTime)
 				}
 				//Update the current driving force
 				CurrentDrivingForce += LongitudinalForce;
-				//Store the force on the wheel for telemetry
-				Tire->UpdateLastLongitudinalForce(LongitudinalForce);
+				//Store the wheel forces on the wheel for telemetry
+				Tire->UpdateLastLongitudinalAndLateralForce(LongitudinalForce, LateralFriction.Size());
 				ApplyWheelForce(Tire, LongitudinalForce, WheelForward, false, false, true);
 
 				//Apply the lateral friction force
@@ -379,8 +379,7 @@ void AVehicle::Input_Gear(const FInputActionValue& Value)
 
 void AVehicle::Input_Pause(const FInputActionValue& Value)
 {
-	//Pause the program the first frame the pause button is down
-
+	//Pause the program
 	TogglePauseMenu();
 }
 
@@ -396,7 +395,7 @@ void AVehicle::UpdateHUD()
 		GearRatio, TotalLoad != 0 ? FrontDynamicLoad / TotalLoad : 0, TotalLoad != 0 ? RearDynamicLoad / TotalLoad : 0, CurrentPresets.TotalVehicleMass, VerticalVelocity, 
 		VehicleWeight, PresetIndex, CurrentPresets.VehicleName, CurrentDrivingForce, 0);
 	//Display information about the wheels
-	HUDDisplay.WheelHUD(AllTires, [this](UTire* Tire) {return GetTireDriveForce(Tire); });
+	HUDDisplay.WheelHUD(AllTires);
 	//Display suspension information
 	HUDDisplay.SuspensionHUD(AllTires, PitchAngle, HeavePosition);
 }

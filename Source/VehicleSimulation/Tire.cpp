@@ -210,6 +210,11 @@ void UTire::StoreInitialTireMeshDimensions()
 	WheelMeshDimension = GetMeshDimensions(WheelMesh);
 }
 
+void UTire::UpdateLastLongitudinalAndLateralForce(const float XForce, const float YForce)
+{
+	LastLongitudinalForce = XForce; LastLateralForce = YForce;
+}
+
 float UTire::GetRollingResistance() const
 {
 	return IsGrounded ? TireLoad * RollingResistanceCoefficient : 0;

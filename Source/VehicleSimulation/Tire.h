@@ -71,7 +71,9 @@ public:
 	//Returns peak slip values
 	float GetPeakSlips(const int Index);
 	//Returns the last longitudinal force on the wheel
-	float GetLastLongitudinalForce() { return LastLongitudinalForce; };
+	float GetLastLongitudinalForce() const { return LastLongitudinalForce; };
+	//Returns the last lateral force on the wheel
+	float GetLastLateralForce() const { return LastLateralForce; };
 	//Returns the maximum grip
 	const float GetMaxGrip() { return MaxGrip; };
 	//Returns the lateral force on the tire
@@ -117,7 +119,7 @@ public:
 	//Reset the rotational velocity of the wheel
 	void ResetRotationalVelocity() { WheelRotationalVelocity = 0; }
 	//Updates the last longitudinal force on the wheel
-	void UpdateLastLongitudinalForce(const float Force) { LastLongitudinalForce= Force; };
+	void UpdateLastLongitudinalAndLateralForce(const float XForce, const float YForce);
 	//Gets the wheel's contact point
 	FVector GetContactPoint() const { return ContactPoint; }
 	//Returns the direction of the normal force on the wheel 
@@ -158,6 +160,7 @@ private:
 	float BrakingTorque = 0;
 	float SuspensionCompression = 0.0f;
 	float LastLateralVelocity = 0;
+	float LastLateralForce = 0;
 	float LastLongitudinalForce = 0;
 	const float MinSlipSpeed = 20.0f;
 	FVector WheelMeshDimension = FVector::ZeroVector;

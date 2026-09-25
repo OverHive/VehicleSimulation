@@ -13,11 +13,14 @@ struct VEHICLESIMULATION_API MagicFormulaModel
 	float CurvatureFactor = 0.0f;
 	//Offset at the slip axis origin
 	float HorizontalShift = 0.0f;
-	//The Force coefficient at zero slip 
+	//The force coefficient at zero slip 
 	float VerticalShift = 0.0f;
+	//The force coefficient at the peak
+	float PeakFactor = 0.0f;
 	MagicFormulaModel() {};
-	MagicFormulaModel(const float NewStiffnessFactor, const float NewShapeFactor, const float NewCurvatureFactor, const float NewHorizontalShift, const float NewVerticalShift)
+	MagicFormulaModel(const float NewPeakFactor, const float NewStiffnessFactor, const float NewShapeFactor, const float NewCurvatureFactor, const float NewHorizontalShift, const float NewVerticalShift)
 	{
+		PeakFactor = NewPeakFactor;
 		StiffnessFactor = NewStiffnessFactor;
 		ShapeFactor = NewShapeFactor;
 		CurvatureFactor = NewCurvatureFactor;
@@ -30,7 +33,7 @@ struct VEHICLESIMULATION_API MagicFormulaModel
 		float StiffnessEffect = StiffnessFactor * Input;
 		float CurvatureEffect = CurvatureFactor * (StiffnessEffect - FMath::Atan(StiffnessEffect));
 		float arc = FMath::Atan(StiffnessEffect - CurvatureEffect);
-		return peakValue * FMath::Sin(ShapeFactor * arc) + VerticalShift;
+		return peakValue *FMath::Clamp(PeakFactor *FMath::Sin(ShapeFactor * arc) + VerticalShift,-1,1);
 	}
 
 };
