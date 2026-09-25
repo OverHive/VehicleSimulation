@@ -385,10 +385,10 @@ void AVehicle::Input_Pause(const FInputActionValue& Value)
 
 void AVehicle::UpdateHUD()
 {
-	float ForwardAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, PhysicsMesh->GetForwardVector()));
+	float ForwardAcceleration = FVector::DotProduct(Acceleration, PhysicsMesh->GetForwardVector());
 	float VerticalVelocity = PhysicsMesh->GetPhysicsLinearVelocity().Z;
 	float TotalLoad = RearDynamicLoad + FrontDynamicLoad;
-	float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, PhysicsMesh->GetForwardVector()));
+	float ForwardVelocity = FVector::DotProduct(CurrentVelocity, PhysicsMesh->GetForwardVector());
 	//Display the state of the vehicle body
 	HUDDisplay.BodyHUD(ForwardVelocity, ForwardAcceleration, CurrentThrottle, CurrentBrake,
 		CurrentSteeringAngle, CurrentSteering, GearIndex, CurrentDrag,
@@ -407,9 +407,9 @@ void AVehicle::LogTelemetry()
 	{
 		return;
 	}
-	float ForwardAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, PhysicsMesh->GetForwardVector()));
-	float LateralAcceleration = FMath::Abs(FVector::DotProduct(Acceleration, GetActorRightVector()));
-	float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, PhysicsMesh->GetForwardVector()));
+	float ForwardAcceleration = FVector::DotProduct(Acceleration, PhysicsMesh->GetForwardVector());
+	float LateralAcceleration = FVector::DotProduct(Acceleration, GetActorRightVector());
+	float ForwardVelocity =FVector::DotProduct(CurrentVelocity, PhysicsMesh->GetForwardVector());
 	VehicleLogger.LogDataToCSV(GetWorld()->GetTimeSeconds(), ForwardVelocity, ForwardAcceleration, LateralAcceleration, CurrentThrottle, CurrentBrake,
 		CurrentSteering, CurrentDrag, PitchAngle, HeavePosition,
 		AllTires, TimeBetweenLastFrames, [this](UTire* Tire) {return GetTireRollingResistance(Tire, Tire->GetForwardVector(), TimeBetweenLastFrames); });
