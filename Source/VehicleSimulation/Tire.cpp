@@ -9,9 +9,7 @@ UTire::UTire()
 {
 	WheelMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WheelMesh"));
 	WheelMesh->SetupAttachment(this);
-	WheelMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	WheelMesh->SetRelativeRotation(FRotator(0.0f, SteerAngle, 0.0f));
-
+	WheelMesh->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
 }
 
 void UTire::UpdateTireRadius(const float Value)

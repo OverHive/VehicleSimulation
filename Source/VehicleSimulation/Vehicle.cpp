@@ -30,18 +30,10 @@ AVehicle::AVehicle()
 		RootComponent = PhysicsMesh;
 		SkeletalMesh->SetupAttachment(PhysicsMesh);
 
-		// Enable physic and gravity;
-		PhysicsMesh->SetSimulatePhysics(true);
-		PhysicsMesh->SetEnableGravity(true);
-		PhysicsMesh->SetMassOverrideInKg(NAME_None, CurrentPresets.TotalVehicleMass, true);
-
 		//For Displaying visual effect
 		VisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BodyMesh"));
 		VisualMesh->SetupAttachment(PhysicsMesh);
-		VisualMesh->SetSimulatePhysics(false);
 
-		//Get the original position of the Visual mesh
-		DefaultVisualMeshPosition = VisualMesh->GetRelativeLocation();
 
 		//Create the front tires
 		FrontRightTire = CreateDefaultSubobject<UTire>(TEXT("Front-Right Tire"));
@@ -59,10 +51,22 @@ AVehicle::AVehicle()
 // Called when the game starts or when spawned
 void AVehicle::BeginPlay()
 {
-	PhysicsMesh->SetMassOverrideInKg(NAME_None, CurrentPresets.TotalVehicleMass, true);
 	//Store the spawning information
 	SpawnLocation = GetActorLocation();
 	SpawnDirection = GetActorQuat();
+	if (SkeletalMesh && PhysicsMesh)
+	{
+		// Enable physic and gravity;
+		PhysicsMesh->SetSimulatePhysics(true);
+		PhysicsMesh->SetEnableGravity(true);
+		if (!HasAnyFlags(RF_ClassDefaultObject) && GEngine)
+		{
+			PhysicsMesh->SetMassOverrideInKg(NAME_None, CurrentPresets.TotalVehicleMass, true);
+		}
+		VisualMesh->SetSimulatePhysics(false);
+		//Get the original position of the Visual mesh
+		DefaultVisualMeshPosition = VisualMesh->GetRelativeLocation();
+	}
 	//
 	MeshDimension = GetMeshDimensions(PhysicsMesh);
 	UpdateStaticLoads();
@@ -92,9 +96,7 @@ void AVehicle::EndPlay(const EEndPlayReason::Type EndPlayReason)
 // Called every frame
 void AVehicle::Tick(float DeltaTime)
 {
-
 	TimeBetweenLastFrames = DeltaTime;
-
 	float ForwardVelocity = FMath::Abs(FVector::DotProduct(CurrentVelocity, PhysicsMesh->GetForwardVector() * 0.036));
 	IsUsingMagicFormula = ForwardVelocity > FormulaThreshold;
 
